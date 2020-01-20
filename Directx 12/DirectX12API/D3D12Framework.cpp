@@ -11,7 +11,7 @@ D3D12Framework::D3D12Framework(UINT width, UINT height, std::wstring name) :
 void D3D12Framework::OnInit()
 {
 	LoadPipeline();
-	// LoadAssets();
+	LoadAssets();
 }
 
 void D3D12Framework::LoadPipeline()
@@ -33,7 +33,7 @@ void D3D12Framework::LoadPipeline()
 #endif
 
     ComPtr<IDXGIFactory4> factory;
-    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(factory.GetAddressOf())));
+    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
 
     if (m_useWarpDevice)
     {
@@ -83,6 +83,7 @@ void D3D12Framework::LoadPipeline()
         &tempSwapChain
     ));
     ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
+
     ThrowIfFailed(tempSwapChain.As(&m_swapChain));
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
@@ -102,23 +103,22 @@ void D3D12Framework::LoadPipeline()
         for (UINT n = 0; n < FrameCount; n++) {
             ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTarget[n])));
             m_device->CreateRenderTargetView(m_renderTarget[n].Get(), nullptr, rtvHandle);
+            rtvHandle.Offset(1, m_rtvDescriptorSize);
         }
     }
 
-    for (int n = 0; n < FrameCount; n++) {
-        ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator[n])));
-    }
+    ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
 }
 
 void D3D12Framework::LoadAssets()
 {
-    ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator->Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
+    ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
     ThrowIfFailed(m_commandList->Close());
 
     for (int n = 0; n < FrameCount; n++)
     {
-        ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence[n])));
-        m_fenceValue[n] = 1;
+        ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+        m_fenceValue = 1;
     }
 
     m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -137,7 +137,11 @@ void D3D12Framework::OnRender()
     PopulateCommandList();
 
     ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-    
+    m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+    ThrowIfFailed(m_swapChain->Present(1, 0));
+
+    WaitForPreviousFrame();
 }
 
 void D3D12Framework::OnDestory()
@@ -148,8 +152,9 @@ void D3D12Framework::OnDestory()
 
 void D3D12Framework::PopulateCommandList()
 {
+
     ThrowIfFailed(m_commandAllocator->Reset());
-    ThrowIfFailed(m_commandList->Reset(m_commandAllocator[m_frameIndex].Get(), m_pipelineState.Get()));
+    ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
 
     m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTarget[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
@@ -157,7 +162,24 @@ void D3D12Framework::PopulateCommandList()
 
     const float clearColor[] = { 0.f, 0.2f, 0.4f, 1.f };
     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTarget[m_frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+
+    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTarget[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
     ThrowIfFailed(m_commandList->Close());
+}
+
+void D3D12Framework::WaitForPreviousFrame()
+{
+    const UINT64 fence = m_fenceValue;
+    ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
+    m_fenceValue++;
+
+    if (m_fence->GetCompletedValue() < fence)
+    {
+        ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
+        WaitForSingleObject(m_fenceEvent, INFINITE);
+    }
+
+    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
 }

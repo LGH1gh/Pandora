@@ -1,6 +1,6 @@
 #pragma once
 
-#include "DXBase.h";
+#include "DXBase.h"
 
 class DXBase;
 

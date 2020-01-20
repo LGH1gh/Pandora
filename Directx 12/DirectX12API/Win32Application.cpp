@@ -14,7 +14,7 @@ int Win32Application::Run(DXBase* pDXBase, HINSTANCE hInstance, int nCmdShow)
 	windowClass.lpszClassName = L"DXBaseClass";
 	RegisterClassEx(&windowClass);
 
-	RECT windowRect = { 0, 0, static_cast<LONG>(pDXBase->GetWidth()), static_cast<LONG>(pDXBase->GetHeight) };
+	RECT windowRect = { 0, 0, static_cast<LONG>(pDXBase->GetWidth()), static_cast<LONG>(pDXBase->GetHeight()) };
 	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
 	m_hwnd = CreateWindow(
@@ -72,6 +72,15 @@ LRESULT CALLBACK Win32Application::WindowProc(HWND hWnd, UINT message, WPARAM wP
 			pBase->OnKeyUp(static_cast<UINT8> (wParam));
 		}
 		return 0;
+
+	case WM_PAINT:
+		if (pBase)
+		{
+			pBase->OnUpdate();
+			pBase->OnRender();
+		}
+		return 0;
+
 
 	case WM_DESTROY:
 		PostQuitMessage(0);
