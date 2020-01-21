@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdexcept>
-
+#define NAME_D3D12_OBJECT(x) SetName((x).Get(), L#x)
 using Microsoft::WRL::ComPtr;
 
 inline std::string HrToString(HRESULT hr)
@@ -44,4 +44,9 @@ inline void GetAssetsPath(_Out_writes_(pathSize) WCHAR* path, UINT pathSize)
 	{
 		*(lastSlash + 1) = L'\0';
 	}
+}
+
+inline void SetName(ID3D12Object* pObject, LPCWSTR name)
+{
+	pObject->SetName(name);
 }
