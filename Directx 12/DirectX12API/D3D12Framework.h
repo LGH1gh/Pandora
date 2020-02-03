@@ -16,11 +16,16 @@ public:
 
 private:
 	static const UINT FrameCount = 2;
+	static const UINT TextureWidth = 256;
+	static const UINT TextureHeight = 256;
+	static const UINT TexturePixelSize = 4;
+
 
 	struct Vertex
 	{
 		XMFLOAT3 position;
 		XMFLOAT4 color;
+		XMFLOAT2 uv;
 	};
 
 
@@ -34,23 +39,28 @@ private:
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
 	ComPtr<ID3D12RootSignature> m_rootSignature;
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-	ComPtr<ID3D12GraphicsCommandList> m_commandList;
+	ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 	ComPtr<ID3D12PipelineState> m_pipelineState;
+	ComPtr<ID3D12GraphicsCommandList> m_commandList;
 	UINT m_rtvDescriptorSize;
 
 	ComPtr<ID3D12Resource> m_vertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+	ComPtr<ID3D12Resource> m_texture;
+
 	ComPtr<ID3D12Resource> m_indexBuffer;
 	D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 	
-	ComPtr<ID3D12Fence> m_fence;
-	HANDLE m_fenceEvent;
-	UINT64 m_fenceValue;
 	UINT m_frameIndex;
+	HANDLE m_fenceEvent;
+	ComPtr<ID3D12Fence> m_fence;
+	UINT64 m_fenceValue;
+	
 
 
 	void LoadPipeline();
 	void LoadAssets();
+	std::vector<UINT8> GenerateTextureData();
 	void PopulateCommandList();
 	void WaitForPreviousFrame();
 };
