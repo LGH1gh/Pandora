@@ -28,6 +28,11 @@ private:
 		XMFLOAT2 uv;
 	};
 
+	struct SceneConstantBuffer
+	{
+		XMFLOAT4 offset;
+	};
+
 
 	// Pipeline objects
 	CD3DX12_VIEWPORT m_viewport;
@@ -39,14 +44,20 @@ private:
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
 	ComPtr<ID3D12RootSignature> m_rootSignature;
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-	ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+	// ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+	ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
 	ComPtr<ID3D12PipelineState> m_pipelineState;
 	ComPtr<ID3D12GraphicsCommandList> m_commandList;
 	UINT m_rtvDescriptorSize;
 
 	ComPtr<ID3D12Resource> m_vertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-	ComPtr<ID3D12Resource> m_texture;
+	
+	ComPtr<ID3D12Resource> m_constantBuffer;
+	SceneConstantBuffer m_constantBufferData;
+	UINT* m_pCbvDataBegin;
+
+	// ComPtr<ID3D12Resource> m_texture;
 
 	ComPtr<ID3D12Resource> m_indexBuffer;
 	D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
