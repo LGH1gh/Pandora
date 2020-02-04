@@ -134,6 +134,7 @@ void D3D12Framework::LoadPipeline()
             rtvHandle.Offset(1, m_rtvDescriptorSize);
 
             ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
+            ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, IID_PPV_ARGS(&m_bundleAllocators[n])));
         }
     }
 }
@@ -237,7 +238,7 @@ void D3D12Framework::LoadAssets()
         ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
     }
 
-    ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[m_frameIndex].Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
+    ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[m_frameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
 
      // Create the vertex buffer.
     {
@@ -361,7 +362,7 @@ void D3D12Framework::LoadAssets()
     // the command list that references it has finished executing on the GPU.
     // We will flush the GPU at the end of this method to ensure the resource is not
     // prematurely destroyed.
-    ComPtr<ID3D12Resource> textureUploadHeap;
+    // ComPtr<ID3D12Resource> textureUploadHeap;
 
     // Create the texture
     /*{
@@ -447,6 +448,16 @@ void D3D12Framework::LoadAssets()
     ThrowIfFailed(m_commandList->Close());
     ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+    
+    // Create and record the bundle.
+    {
+        ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, m_bundleAllocators[m_frameIndex].Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_bundle)));
+        m_bundle->SetGraphicsRootSignature(m_rootSignature.Get());
+        m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        m_bundle->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+        m_bundle->DrawInstanced(3, 1, 0, 0);
+        ThrowIfFailed(m_bundle->Close());
+    }
 
     {
         ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
@@ -564,11 +575,9 @@ void D3D12Framework::PopulateCommandList()
     // Record commands.
     const float clearColor[] = { 0.f, 0.2f, 0.4f, 1.f };
     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-    m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-    //m_commandList->IASetIndexBuffer(&m_indexBufferView);
-    //m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-    m_commandList->DrawInstanced(3, 1, 0, 0);
+    
+    // Execute the commands stored in the bundle.
+    m_commandList->ExecuteBundle(m_bundle.Get());
 
     // Indicate that the back buffer will now be used to present.
     m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTarget[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
