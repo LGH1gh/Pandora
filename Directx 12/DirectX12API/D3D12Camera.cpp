@@ -607,4 +607,202 @@ void D3D12Camera::PopulateCommandList()
 
 	ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].Get(), m_pipelineState.Get()));
 
+	m_commandList->SetPipelineState(m_pipelineState.Get());
+	m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+
+	m_commandList->SetGraphicsRootConstantBufferView(GraphicsRootCVB, m_constantBufferGS->GetGPUVirtualAddress() + m_frameIndex * sizeof(ConstantBufferGS));
+
+	ID3D12DescriptorHeap* ppHeaps[] = { m_srvUavHeap.Get() };
+	m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+	m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+	m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+
+	const float clearColor[] = { 0.0f, 0.0f, 0.1f, 0.0f };
+	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+
+	float viewportHeight = static_cast<float>(static_cast<UINT>(m_viewport.Height) / m_heightInstances);
+	float viewportWidth = static_cast<float>(static_cast<UINT>(m_viewport.Width) / m_widthInstances);
+	for (UINT n = 0; n < ThreadCount; n++)
+	{
+		const UINT srvIndex = n + (m_srvIndex[n] == 0 ? SrvParticlePosVelo0 : SrvParticlePosVelo1);
+		
+		CD3DX12_VIEWPORT viewport(
+			(n % m_widthInstances) * viewportWidth,
+			(n / m_widthInstances) * viewportHeight,
+			viewportWidth,
+			viewportHeight
+		);
+
+		m_commandList->RSSetViewports(1, &viewport);
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_srvUavHeap->GetGPUDescriptorHandleForHeapStart(), srvIndex, m_srvUavDescriptorSize);
+		m_commandList->SetGraphicsRootDescriptorTable(GraphicsRootSRVTable, srvHandle);
+
+		PIXBeginEvent(m_commandList.Get(), 0, L"Draw partices for thread %u", n);
+		m_commandList->DrawInstanced(ParticleCount, 1, 0, 0);
+		PIXEndEvent(m_commandList.Get());
+	}
+
+	m_commandList->RSSetViewports(1, &m_viewport);
+
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	
+	ThrowIfFailed(m_commandList->Close());
+}
+
+DWORD D3D12Camera::AsyncComputeThreadProc(int threadIndex)
+{
+	ID3D12CommandQueue* pCommandQueue = m_computeCommandQueue[threadIndex].Get();
+	ID3D12CommandAllocator* pCommandAllocator = m_computeAllocator[threadIndex].Get();
+	ID3D12GraphicsCommandList* pCommandList = m_computeCommandList[threadIndex].Get();
+	ID3D12Fence* pFence = m_threadFences[threadIndex].Get();
+
+	while (0 == InterlockedGetValue(&m_terminating))
+	{
+		// Run the particle simulation.
+		Simulate(threadIndex);
+
+		// Close and execute the command list.
+		ThrowIfFailed(pCommandList->Close());
+		ID3D12CommandList* ppCommandLists[] = { pCommandList };
+
+		PIXBeginEvent(pCommandQueue, 0, L"Thread %d: Iterate on the particle simulation", threadIndex);
+		pCommandQueue->ExecuteCommandLists(1, ppCommandLists);
+		PIXEndEvent(pCommandQueue);
+
+		// Wait for the compute shader to complete the simulation.
+		UINT64 threadFenceValue = InterlockedIncrement(&m_threadFenceValues[threadIndex]);
+		ThrowIfFailed(pCommandQueue->Signal(pFence, threadFenceValue));
+		ThrowIfFailed(pFence->SetEventOnCompletion(threadFenceValue, m_threadFenceEvents[threadIndex]));
+		WaitForSingleObject(m_threadFenceEvents[threadIndex], INFINITE);
+
+		// Wait for the render thread to be done with the SRV so that
+		// the next frame in the simulation can run.
+		UINT64 renderContextFenceValue = InterlockedGetValue(&m_renderContextFenceValues[threadIndex]);
+		if (m_renderContextFence->GetCompletedValue() < renderContextFenceValue)
+		{
+			ThrowIfFailed(pCommandQueue->Wait(m_renderContextFence.Get(), renderContextFenceValue));
+			InterlockedExchange(&m_renderContextFenceValues[threadIndex], 0);
+		}
+
+		// Swap the indices to the SRV and UAV.
+		m_srvIndex[threadIndex] = 1 - m_srvIndex[threadIndex];
+
+		// Prepare for the next frame.
+		ThrowIfFailed(pCommandAllocator->Reset());
+		ThrowIfFailed(pCommandList->Reset(pCommandAllocator, m_computeState.Get()));
+	}
+
+	return 0;
+}
+
+void D3D12Camera::Simulate(UINT threadIndex)
+{
+	ID3D12GraphicsCommandList* pCommandList = m_computeCommandList[threadIndex].Get();
+
+	UINT srvIndex;
+	UINT uavIndex;
+	ID3D12Resource* pUavResource;
+	if (m_srvIndex[threadIndex] == 0)
+	{
+		srvIndex = SrvParticlePosVelo0;
+		uavIndex = UavParticlePosVelo1;
+		pUavResource = m_particleBuffer1[threadIndex].Get();
+	}
+	else
+	{
+		srvIndex = SrvParticlePosVelo1;
+		uavIndex = UavParticlePosVelo0;
+		pUavResource = m_particleBuffer0[threadIndex].Get();
+	}
+
+	pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pUavResource, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+
+	pCommandList->SetPipelineState(m_computeState.Get());
+	pCommandList->SetComputeRootSignature(m_computeRootSignature.Get());
+
+	ID3D12DescriptorHeap* ppHeaps[] = { m_srvUavHeap.Get() };
+	pCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+	CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(m_srvUavHeap->GetGPUDescriptorHandleForHeapStart(), srvIndex + threadIndex, m_srvUavDescriptorSize);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE uavHandle(m_srvUavHeap->GetGPUDescriptorHandleForHeapStart(), uavIndex + threadIndex, m_srvUavDescriptorSize);
+
+	pCommandList->SetComputeRootConstantBufferView(ComputeRootCBV, m_constantBufferCS->GetGPUVirtualAddress());
+	pCommandList->SetComputeRootDescriptorTable(ComputeRootSRVTable, srvHandle);
+	pCommandList->SetComputeRootDescriptorTable(ComputeRootUAVTable, uavHandle);
+
+	pCommandList->Dispatch(static_cast<int>(ceil(ParticleCount / 128.0f)), 1, 1);
+
+	pCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(pUavResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+}
+
+void D3D12Camera::OnDestroy()
+{
+	// Notify the compute threads that the app is shutting down.
+	InterlockedExchange(&m_terminating, 1);
+	WaitForMultipleObjects(ThreadCount, m_threadHandles, TRUE, INFINITE);
+
+	// Ensure that the GPU is no longer referencing resources that are about to be
+	// cleaned up by the destructor.
+	WaitForRenderContext();
+
+	// Close handles to fence events and threads.
+	CloseHandle(m_renderContextFenceEvent);
+	for (int n = 0; n < ThreadCount; n++)
+	{
+		CloseHandle(m_threadHandles[n]);
+		CloseHandle(m_threadFenceEvents[n]);
+	}
+}
+
+void D3D12Camera::OnKeyDown(UINT8 key)
+{
+	m_camera.OnKeyDown(key);
+}
+
+void D3D12Camera::OnKeyUp(UINT8 key)
+{
+	m_camera.OnKeyUp(key);
+}
+
+void D3D12Camera::WaitForRenderContext()
+{
+	// Add a signal command to the queue.
+	ThrowIfFailed(m_commandQueue->Signal(m_renderContextFence.Get(), m_renderContextFenceValue));
+
+	// Instruct the fence to set the event object when the signal command completes.
+	ThrowIfFailed(m_renderContextFence->SetEventOnCompletion(m_renderContextFenceValue, m_renderContextFenceEvent));
+	m_renderContextFenceValue++;
+
+	// Wait until the signal command has been processed.
+	WaitForSingleObject(m_renderContextFenceEvent, INFINITE);
+}
+
+// Cycle through the frame resources. This method blocks execution if the 
+// next frame resource in the queue has not yet had its previous contents 
+// processed by the GPU.
+void D3D12Camera::MoveToNextFrame()
+{
+	// Assign the current fence value to the current frame.
+	m_frameFenceValues[m_frameIndex] = m_renderContextFenceValue;
+
+	// Signal and increment the fence value.
+	ThrowIfFailed(m_commandQueue->Signal(m_renderContextFence.Get(), m_renderContextFenceValue));
+	m_renderContextFenceValue++;
+
+	// Update the frame index.
+	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+	// If the next frame is not ready to be rendered yet, wait until it is ready.
+	if (m_renderContextFence->GetCompletedValue() < m_frameFenceValues[m_frameIndex])
+	{
+		ThrowIfFailed(m_renderContextFence->SetEventOnCompletion(m_frameFenceValues[m_frameIndex], m_renderContextFenceEvent));
+		WaitForSingleObject(m_renderContextFenceEvent, INFINITE);
+	}
 }

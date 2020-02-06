@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 #define NAME_D3D12_OBJECT(x) SetName((x).Get(), L#x)
+#define NAME_D3D12_OBJECT_INDEXED(x, n) SetNameIndexed((x)[n].Get(), L#x, n)
+
 using Microsoft::WRL::ComPtr;
 
 inline std::string HrToString(HRESULT hr)

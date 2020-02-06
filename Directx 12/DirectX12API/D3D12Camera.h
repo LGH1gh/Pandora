@@ -46,7 +46,7 @@ private:
 	struct ConstantBufferCS
 	{
 		UINT param[4];
-		float param[4];
+		float paramf[4];
 	};
 
 	CD3DX12_VIEWPORT m_viewport;
@@ -76,7 +76,7 @@ private:
 	ComPtr<ID3D12Resource> m_particleBuffer0Upload[ThreadCount];
 	ComPtr<ID3D12Resource> m_particleBuffer1Upload[ThreadCount];
 	ComPtr<ID3D12Resource> m_constantBufferGS;
-	UINT* m_pConstantBufferGSData;
+	UINT8* m_pConstantBufferGSData;
 	ComPtr<ID3D12Resource> m_constantBufferCS;
 
 	UINT m_srvIndex[ThreadCount];
