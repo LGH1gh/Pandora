@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "D3D12Framework.h"
+#include "D3D12HalloDX12.h"
 
-D3D12Framework::D3D12Framework(UINT width, UINT height, std::wstring name) :
+D3D12HalloDX12::D3D12HalloDX12(UINT width, UINT height, std::wstring name) :
     DXBase(width, height, name),
     m_frameIndex(0),
     m_pCbvDataBegin(nullptr),
@@ -13,13 +13,13 @@ D3D12Framework::D3D12Framework(UINT width, UINT height, std::wstring name) :
 {
 }
 
-void D3D12Framework::OnInit()
+void D3D12HalloDX12::OnInit()
 {
 	LoadPipeline();
 	LoadAssets();
 }
 
-void D3D12Framework::LoadPipeline()
+void D3D12HalloDX12::LoadPipeline()
 {
     UINT dxgiFactoryFlags = 0;
 #if defined(_DEBUG)
@@ -140,7 +140,7 @@ void D3D12Framework::LoadPipeline()
 }
 
 // Load the sample assets.
-void D3D12Framework::LoadAssets()
+void D3D12HalloDX12::LoadAssets()
 {
     // Create a root signature consisting of a descriptor table with a single CBV,
     {
@@ -474,7 +474,7 @@ void D3D12Framework::LoadAssets()
 }
 
 // Generate a simple black and white checkerboard texture.
-std::vector<UINT8> D3D12Framework::GenerateTextureData()
+std::vector<UINT8> D3D12HalloDX12::GenerateTextureData()
 {
     const UINT rowPitch = TextureWidth * TexturePixelSize;
     const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
@@ -511,7 +511,7 @@ std::vector<UINT8> D3D12Framework::GenerateTextureData()
 }
 
 // Update frame-based values
-void D3D12Framework::OnUpdate()
+void D3D12HalloDX12::OnUpdate()
 {
     const float translationSpeed = 0.005f;
     const float offsetBounds = 1.25f;
@@ -525,7 +525,7 @@ void D3D12Framework::OnUpdate()
     memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
 }
 
-void D3D12Framework::OnRender()
+void D3D12HalloDX12::OnRender()
 {
     PopulateCommandList();
 
@@ -538,13 +538,13 @@ void D3D12Framework::OnRender()
     MoveToNextFrame();
 }
 
-void D3D12Framework::OnDestory()
+void D3D12HalloDX12::OnDestory()
 {
     WaitForGPU();
     CloseHandle(m_fenceEvent);
 }
 
-void D3D12Framework::PopulateCommandList()
+void D3D12HalloDX12::PopulateCommandList()
 {
     // Command list allocators can only be reset when the associated 
     // command lists have finished execution on the GPU; apps should use 
@@ -585,7 +585,7 @@ void D3D12Framework::PopulateCommandList()
     ThrowIfFailed(m_commandList->Close());
 }
 
-void D3D12Framework::WaitForGPU()
+void D3D12HalloDX12::WaitForGPU()
 {
     ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValues[m_frameIndex]));
 
@@ -597,7 +597,7 @@ void D3D12Framework::WaitForGPU()
     m_fenceValues[m_frameIndex]++;
 }
 
-void D3D12Framework::MoveToNextFrame()
+void D3D12HalloDX12::MoveToNextFrame()
 {
     const UINT64 currentFenceValue = m_fenceValues[m_frameIndex];
     ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), currentFenceValue));

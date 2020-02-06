@@ -3,11 +3,12 @@
 #include "DXBase.h"
 
 using namespace DirectX;
+
 using Microsoft::WRL::ComPtr;
 
-class D3D12Framework : public DXBase {
+class D3D12HalloDX12 : public DXBase {
 public:
-	D3D12Framework(UINT width, UINT height, std::wstring name);
+	D3D12HalloDX12(UINT width, UINT height, std::wstring name);
 
 	virtual void OnInit();
 	virtual void OnUpdate();
