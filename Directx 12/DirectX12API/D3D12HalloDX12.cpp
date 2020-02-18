@@ -538,7 +538,7 @@ void D3D12HalloDX12::OnRender()
     MoveToNextFrame();
 }
 
-void D3D12HalloDX12::OnDestory()
+void D3D12HalloDX12::OnDestroy()
 {
     WaitForGPU();
     CloseHandle(m_fenceEvent);

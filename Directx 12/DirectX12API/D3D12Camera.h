@@ -116,7 +116,7 @@ private:
 
 	enum GraphicsRootParameters : UINT32
 	{
-		GraphicsRootCVB = 0,
+		GraphicsRootCBV = 0,
 		GraphicsRootSRVTable,
 		GraphicsRootParametersCount
 	};

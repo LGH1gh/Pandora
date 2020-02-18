@@ -13,7 +13,7 @@ public:
 	virtual void OnInit();
 	virtual void OnUpdate();
 	virtual void OnRender();
-	virtual void OnDestory();
+	virtual void OnDestroy();
 
 private:
 	static const UINT FrameCount = 2;

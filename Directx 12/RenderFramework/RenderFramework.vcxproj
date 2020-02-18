@@ -75,6 +75,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <ExecutablePath>$(ExecutablePath)</ExecutablePath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -98,12 +101,13 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -139,6 +143,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ConstantBuffer.h" />
+    <ClInclude Include="D3D12Render.h" />
+    <ClInclude Include="d3dx12.h" />
+    <ClInclude Include="DXBase.h" />
+    <ClInclude Include="DXBaseHelper.h" />
+    <ClInclude Include="Geometry.h" />
+    <ClInclude Include="SceneConstantBuffer.h" />
+    <ClInclude Include="Vertices.h" />
+    <ClInclude Include="Win32Application.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="D3D12Render.cpp" />
+    <ClCompile Include="DXBase.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="SceneConstantBuffer.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="stdafx.h" />
+    <ClCompile Include="Vertices.cpp" />
+    <ClCompile Include="Win32Application.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\x64\Debug\Shader.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

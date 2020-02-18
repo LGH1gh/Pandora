@@ -1,9 +1,10 @@
 #pragma once
-
-#include "DXBaseHelper.h"
 #include "Win32Application.h"
+#include "Geometry.h"
+#include "DXBasehelper.h"
 
-class DXBase {
+class DXBase
+{
 public:
 	DXBase(UINT width, UINT height, std::wstring name);
 	virtual ~DXBase();
@@ -13,6 +14,8 @@ public:
 	virtual void OnRender() = 0;
 	virtual void OnDestroy() = 0;
 
+	virtual void SetGeometry(Geometry* geometry) = 0;
+
 	virtual void OnKeyDown(UINT8) {}
 	virtual void OnKeyUp(UINT8) {}
 
@@ -20,13 +23,10 @@ public:
 	UINT GetHeight() const { return m_height; }
 	const WCHAR* GetTitle() const { return m_title.c_str(); }
 
-	// void ParseCommandLineArgs(_In_reads_(argc) WCHAR* argv[], int argc);
-
 protected:
 	std::wstring GetAssetFullPath(LPCWSTR assetName);
 	void GetHardwareAdapter(_In_ IDXGIFactory2* pFactory, _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter);
 	void SetCustomWindowText(LPCWSTR text);
-
 
 	UINT m_width;
 	UINT m_height;
@@ -35,6 +35,6 @@ protected:
 	bool m_useWarpDevice;
 
 private:
-	std::wstring m_assetsPath;
+	std::wstring m_assetPath;
 	std::wstring m_title;
 };
