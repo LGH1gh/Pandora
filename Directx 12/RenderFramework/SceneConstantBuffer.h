@@ -1,5 +1,6 @@
 #pragma once
 
+#include "stdafx.h"
 #include "ConstantBuffer.h"
 
 using namespace DirectX;
@@ -8,6 +9,16 @@ using Microsoft::WRL::ComPtr;
 class SceneConstantBuffer : public ConstantBuffer
 {
 public:
+    struct Data
+    {
+        XMFLOAT4 offset;
+    };
+
+    SceneConstantBuffer()
+    {
+        data.offset = XMFLOAT4(0.0, 0.0, 0.0, 0.0);
+    }
+
 	virtual void OnUpdate()
 	{
         const float translationSpeed = 0.005f;
@@ -30,9 +41,5 @@ public:
         return static_cast<void*>(&data);
     }
 
-
-    struct Data
-    {
-        XMFLOAT4 offset;
-    } data;
+    Data data;
 };

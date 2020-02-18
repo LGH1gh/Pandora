@@ -15,6 +15,8 @@ public:
 	virtual void OnDestroy() = 0;
 
 	virtual void SetGeometry(Geometry* geometry) = 0;
+	virtual void SetVertexShader(std::wstring fullPath, LPCSTR funcName) = 0;;
+	virtual void SetPixelShader(std::wstring fullPath, LPCSTR funcName) = 0;
 
 	virtual void OnKeyDown(UINT8) {}
 	virtual void OnKeyUp(UINT8) {}
