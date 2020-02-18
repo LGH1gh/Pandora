@@ -19,11 +19,6 @@ public:
         float padding[32];
     };
 
-    GraphicsConstantBuffer()
-    {
-        
-    }
-
     virtual void OnUpdate()
     {
 

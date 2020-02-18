@@ -2,6 +2,8 @@
 
 #include "DXBase.h"
 #include "ConstantBuffer.h"
+#include "Camera.h"
+#include "StepTimer.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -32,7 +34,6 @@ private:
     ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
     ComPtr<ID3D12CommandQueue> m_commandQueue;
     ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-    
     UINT m_rtvDescriptorSize;
 
     ComPtr<ID3D12RootSignature> m_rootSignature;
@@ -42,11 +43,11 @@ private:
     ComPtr<ID3D12Resource> m_vertexBuffer;
     ComPtr<ID3D12Resource> m_vertexBufferUpload;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-
     ComPtr<ID3D12Resource> m_indexBuffer;
     ComPtr<ID3D12Resource> m_indexBufferUpload;
     D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 
+    HANDLE m_swapChainEvent;
     ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
     ComPtr<ID3D12Resource> m_constantBuffer;
     ComPtr<ID3D12Resource> m_constantBufferUpload;
@@ -61,6 +62,7 @@ private:
     ConstantBuffer* m_pConstantBufferData;
     std::wstring m_VertexShaderFullPath, m_PixelShaderFullPath;
     LPCSTR m_VertexShaderFuncName, m_PixelShaderFuncName;
+    Camera m_camera;
 
     void LoadPipeline();
     void LoadAssets();
@@ -75,6 +77,4 @@ private:
     void CreateIndexBuffer();
     void CreateConstantBuffer();
     void CreateFence();
-
-
 };

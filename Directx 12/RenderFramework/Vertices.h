@@ -17,10 +17,15 @@ struct Vertex
 	}
 };
 
-struct Body
+struct Particle
 {
 	XMFLOAT4 position;
 	XMFLOAT4 velocity;
+};
+
+struct ParticleVertex
+{
+	XMFLOAT4 color;
 };
 
 class Vertices : public Geometry

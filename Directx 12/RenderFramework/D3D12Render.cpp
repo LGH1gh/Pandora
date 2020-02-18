@@ -32,6 +32,9 @@ void D3D12Render::SetPixelShader(std::wstring fullPath, LPCSTR funcName)
 
 void D3D12Render::OnInit()
 {
+    m_camera.Init({ 0.0f, 0.0f, 1500.0f });
+    m_camera.SetMoveSpeed(250.0f);
+
     LoadPipeline();
     LoadAssets();
 }
@@ -96,7 +99,8 @@ void D3D12Render::LoadPipeline()
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swapChainDesc.SampleDesc.Count = 1;
-
+    swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+    
     ComPtr<IDXGISwapChain1> swapChain;
     ThrowIfFailed(factory->CreateSwapChainForHwnd(
         m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
@@ -112,6 +116,7 @@ void D3D12Render::LoadPipeline()
 
     ThrowIfFailed(swapChain.As(&m_swapChain));
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+    m_swapChainEvent = m_swapChain->GetFrameLatencyWaitableObject();
 
     // Create descriptor heaps.
     {
@@ -225,8 +230,7 @@ void D3D12Render::CreatePipeline()
     psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
     psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
     psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-    psoDesc.DepthStencilState.DepthEnable = FALSE;
-    psoDesc.DepthStencilState.StencilEnable = FALSE;
+    psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
     psoDesc.SampleMask = UINT_MAX;
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     psoDesc.NumRenderTargets = 1;

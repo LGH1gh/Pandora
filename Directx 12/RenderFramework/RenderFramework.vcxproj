@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="ComputeConstantBuffer.h" />
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="D3D12Render.h" />
@@ -151,10 +152,12 @@
     <ClInclude Include="DXBaseHelper.h" />
     <ClInclude Include="Geometry.h" />
     <ClInclude Include="SceneConstantBuffer.h" />
+    <ClInclude Include="StepTimer.h" />
     <ClInclude Include="Vertices.h" />
     <ClInclude Include="Win32Application.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="D3D12Render.cpp" />
     <ClCompile Include="DXBase.cpp" />
     <ClCompile Include="GraphicsConstantBuffer.h" />

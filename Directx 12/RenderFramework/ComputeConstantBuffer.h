@@ -12,11 +12,6 @@ public:
         float paramf[4];
     };
 
-    ComputeConstantBuffer()
-    {
-
-    }
-
     virtual void OnUpdate()
     {
 
