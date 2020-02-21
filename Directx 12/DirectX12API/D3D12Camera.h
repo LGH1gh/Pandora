@@ -1,12 +1,12 @@
 #pragma once
 
-#include "DXBase.h"
+#include "BaseApp.h"
 #include "Camera.h"
 #include "StepTimer.h"
 
 using Microsoft::WRL::ComPtr;
 
-class D3D12Camera : public DXBase
+class D3D12Camera : public BaseApp
 {
 public:
 	D3D12Camera(UINT width, UINT height, std::wstring name);
@@ -19,10 +19,10 @@ public:
 	virtual void OnKeyUp(UINT8 key);
 
 private:
-	static const UINT FrameCount = 2;
-	static const UINT ThreadCount = 1;
+	static const UINT FrameCount;
+	static const UINT ThreadCount;
 	static const float ParticleSpread;
-	static const UINT ParticleCount = 10000;
+	static const UINT ParticleCount0000;
 
 	struct ParticleVertex
 	{
@@ -116,14 +116,14 @@ private:
 
 	enum GraphicsRootParameters : UINT32
 	{
-		GraphicsRootCBV = 0,
+		GraphicsRootCBV0,
 		GraphicsRootSRVTable,
 		GraphicsRootParametersCount
 	};
 
 	enum ComputeRootParameters : UINT32
 	{
-		ComputeRootCBV = 0,
+		ComputeRootCBV0,
 		ComputeRootSRVTable,
 		ComputeRootUAVTable,
 		ComputeRootParametersCount
@@ -131,11 +131,11 @@ private:
 
 	enum DescriptorHeapIndex : UINT32
 	{
-		UavParticlePosVelo0 = 0,
-		UavParticlePosVelo1 = UavParticlePosVelo0 + ThreadCount,
-		SrvParticlePosVelo0 = UavParticlePosVelo1 + ThreadCount,
-		SrvParticlePosVelo1 = SrvParticlePosVelo0 + ThreadCount,
-		DescriptorCount = SrvParticlePosVelo1 + ThreadCount
+		UavParticlePosVelo00,
+		UavParticlePosVelo1UavParticlePosVelo0 + ThreadCount,
+		SrvParticlePosVelo0UavParticlePosVelo1 + ThreadCount,
+		SrvParticlePosVelo1SrvParticlePosVelo0 + ThreadCount,
+		DescriptorCountSrvParticlePosVelo1 + ThreadCount
 	};
 
 	void LoadPipeline();

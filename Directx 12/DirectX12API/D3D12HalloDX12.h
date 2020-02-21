@@ -1,12 +1,12 @@
 #pragma once
 
-#include "DXBase.h"
+#include "BaseApp.h"
 
 using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
 
-class D3D12HalloDX12 : public DXBase {
+class D3D12HalloDX12 : public BaseApp {
 public:
 	D3D12HalloDX12(UINT width, UINT height, std::wstring name);
 
@@ -16,10 +16,10 @@ public:
 	virtual void OnDestroy();
 
 private:
-	static const UINT FrameCount = 2;
-	static const UINT TextureWidth = 256;
-	static const UINT TextureHeight = 256;
-	static const UINT TexturePixelSize = 4;
+	static const UINT FrameCount;
+	static const UINT TextureWidth;
+	static const UINT TextureHeight;
+	static const UINT TexturePixelSize;
 
 
 	struct Vertex

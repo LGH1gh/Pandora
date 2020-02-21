@@ -14,9 +14,9 @@ PSInput VSMain(float3 position : POSITION, float4 color : COLOR, float4 uv : TEX
 {
     PSInput result;
 
-    result.position = float4(position, 1.0) + offset;
-    result.color = color;
-    result.uv = uv;
+    result.positionfloat4(position, 1.0) + offset;
+    result.colorcolor;
+    result.uvuv;
     
     return result;
 }

@@ -1,7 +1,7 @@
 #pragma once
+#pragma once
 
-#include "BaseApp.h"
-
+#include <windows.h>
 class BaseApp;
 
 class Win32Application {

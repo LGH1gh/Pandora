@@ -6,7 +6,7 @@ class DXBase;
 
 class Win32Application {
 public:
-	static int Run(DXBase* pSample, HINSTANCE hInstance, int nCmdShow);
+	static int Run(DXBase* pBaseApp, HINSTANCE hInstance, int nCmdShow);
 	static HWND GetHwnd() { return m_hwnd; }
 
 protected:

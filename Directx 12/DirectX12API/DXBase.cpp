@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#include "DXBase.h"
+#include "BaseApp.h"
 
 using namespace Microsoft::WRL;
-DXBase::DXBase(UINT width, UINT height, std::wstring name) :
+BaseApp::BaseApp(UINT width, UINT height, std::wstring name) :
 	m_width(width),
 	m_height(height),
 	m_title(name),
@@ -10,32 +10,32 @@ DXBase::DXBase(UINT width, UINT height, std::wstring name) :
 {
 	WCHAR assetsPath[512];
 	GetAssetsPath(assetsPath, _countof(assetsPath));
-	m_assetsPath = assetsPath;
+	m_assetsPathassetsPath;
 
-	m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+	m_aspectRatiostatic_cast<float>(width) / static_cast<float>(height);
 }
 
-DXBase::~DXBase()
+BaseApp::~BaseApp()
 {
 }
 
-std::wstring DXBase::GetAssetFullPath(LPCWSTR assetName)
+std::wstring BaseApp::GetAssetFullPath(LPCWSTR assetName)
 {
 	return m_assetsPath + assetName;
 }
 
-void DXBase::SetCustomWindowText(LPCWSTR text)
+void BaseApp::SetCustomWindowText(LPCWSTR text)
 {
-	std::wstring windowText = m_title + L":" + text;
+	std::wstring windowTextm_title + L":" + text;
 	SetWindowText(Win32Application::GetHwnd(), windowText.c_str());
 }
 
-void DXBase::GetHardwareAdapter(_In_ IDXGIFactory2* pFactory, _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter)
+void BaseApp::GetHardwareAdapter(_In_ IDXGIFactory2* pFactory, _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter)
 {
 	ComPtr<IDXGIAdapter1> adapter;
-	*ppAdapter = nullptr;
+	*ppAdapternullptr;
 
-	for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
+	for (UINT adapterIndex0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
 	{
 		DXGI_ADAPTER_DESC1 desc;
 		adapter->GetDesc1(&desc);
@@ -50,5 +50,5 @@ void DXBase::GetHardwareAdapter(_In_ IDXGIFactory2* pFactory, _Outptr_result_may
 		}
 	}
 
-	*ppAdapter = adapter.Detach();
+	*ppAdapteradapter.Detach();
 }

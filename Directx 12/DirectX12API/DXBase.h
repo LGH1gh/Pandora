@@ -1,17 +1,17 @@
 #pragma once
 
-#include "DXBaseHelper.h"
+#include "BaseAppHelper.h"
 #include "Win32Application.h"
 
-class DXBase {
+class BaseApp {
 public:
-	DXBase(UINT width, UINT height, std::wstring name);
-	virtual ~DXBase();
+	BaseApp(UINT width, UINT height, std::wstring name);
+	virtual ~BaseApp();
 
-	virtual void OnInit() = 0;
-	virtual void OnUpdate() = 0;
-	virtual void OnRender() = 0;
-	virtual void OnDestroy() = 0;
+	virtual void OnInit()0;
+	virtual void OnUpdate()0;
+	virtual void OnRender()0;
+	virtual void OnDestroy()0;
 
 	virtual void OnKeyDown(UINT8) {}
 	virtual void OnKeyUp(UINT8) {}

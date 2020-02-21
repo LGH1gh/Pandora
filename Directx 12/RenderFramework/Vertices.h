@@ -36,7 +36,7 @@ public:
 
 	void SetIndex(std::vector<DWORD> i)
 	{
-		index = i;
+		indexi;
 	}
 
 	void AddVertex(Vertex datum)
@@ -67,7 +67,7 @@ public:
 			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 		};
 
-		D3D12_INPUT_LAYOUT_DESC layoutDesc = { elementDesc, _countof(elementDesc) };
+		D3D12_INPUT_LAYOUT_DESC layoutDesc{ elementDesc, _countof(elementDesc) };
 
 		return layoutDesc;
 	}

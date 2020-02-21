@@ -21,7 +21,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		0, 2, 1,
 		0, 1, 3
 	});
-	sample.SetGeometry(&vertices);
+	sample.CreateGeometry(&vertices);
 
 	SceneConstantBuffer constantBufferData;
 	sample.SetConstantBuffer(&constantBufferData);

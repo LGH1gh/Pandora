@@ -8,26 +8,26 @@ D3D12Render::D3D12Render(UINT width, UINT height, std::wstring name) :
 {
 }
 
-void D3D12Render::SetGeometry(Geometry* geometry)
+void D3D12Render::CreateGeometry(Geometry* geometry)
 {
-    m_pGeometry = geometry;
+    m_pGeometrygeometry;
 }
 
 void D3D12Render::SetConstantBuffer(ConstantBuffer* constantBufferData)
 {
-    m_pConstantBufferData = constantBufferData;
+    m_pConstantBufferDataconstantBufferData;
 }
 
 void D3D12Render::SetVertexShader(std::wstring fullPath, LPCSTR funcName)
 {
-    m_VertexShaderFullPath = fullPath;
-    m_VertexShaderFuncName = funcName;
+    m_VertexShaderFullPathfullPath;
+    m_VertexShaderFuncNamefuncName;
 }
 
 void D3D12Render::SetPixelShader(std::wstring fullPath, LPCSTR funcName)
 {
-    m_PixelShaderFullPath = fullPath;
-    m_PixelShaderFuncName = funcName;
+    m_PixelShaderFullPathfullPath;
+    m_PixelShaderFuncNamefuncName;
 }
 
 void D3D12Render::OnInit()
@@ -41,7 +41,7 @@ void D3D12Render::OnInit()
 
 void D3D12Render::LoadPipeline()
 {
-    UINT dxgiFactoryFlags = 0;
+    UINT dxgiFactoryFlags0;
 #if defined(_DEBUG)
     // Enable the debug layer (requires the Graphics Tools "optional feature").
     // NOTE: Enabling the debug layer after device creation will invalidate the active device.
@@ -84,22 +84,22 @@ void D3D12Render::LoadPipeline()
     }
 
     // Describe and create the command queue.
-    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    D3D12_COMMAND_QUEUE_DESC queueDesc{};
+    queueDesc.FlagsD3D12_COMMAND_QUEUE_FLAG_NONE;
+    queueDesc.TypeD3D12_COMMAND_LIST_TYPE_DIRECT;
 
     ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
 
     // Describe and create the swap chain.
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.BufferCount = FrameCount;
-    swapChainDesc.Width = m_width;
-    swapChainDesc.Height = m_height;
-    swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    swapChainDesc.SampleDesc.Count = 1;
-    swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
+    swapChainDesc.BufferCountFrameCount;
+    swapChainDesc.Widthm_width;
+    swapChainDesc.Heightm_height;
+    swapChainDesc.FormatDXGI_FORMAT_R8G8B8A8_UNORM;
+    swapChainDesc.BufferUsageDXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.SwapEffectDXGI_SWAP_EFFECT_FLIP_DISCARD;
+    swapChainDesc.SampleDesc.Count;
+    swapChainDesc.FlagsDXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
     
     ComPtr<IDXGISwapChain1> swapChain;
     ThrowIfFailed(factory->CreateSwapChainForHwnd(
@@ -115,19 +115,19 @@ void D3D12Render::LoadPipeline()
     ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
 
     ThrowIfFailed(swapChain.As(&m_swapChain));
-    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-    m_swapChainEvent = m_swapChain->GetFrameLatencyWaitableObject();
+    m_frameIndexm_swapChain->GetCurrentBackBufferIndex();
+    m_swapChainEventm_swapChain->GetFrameLatencyWaitableObject();
 
     // Create descriptor heaps.
     {
         // Describe and create a render target view (RTV) descriptor heap.
-        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-        rtvHeapDesc.NumDescriptors = FrameCount;
-        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
+        rtvHeapDesc.NumDescriptorsFrameCount;
+        rtvHeapDesc.TypeD3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        rtvHeapDesc.FlagsD3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
 
-        m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        m_rtvDescriptorSizem_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     }
 
     // Create frame resources.
@@ -135,7 +135,7 @@ void D3D12Render::LoadPipeline()
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
         // Create a RTV for each frame.
-        for (UINT n = 0; n < FrameCount; n++)
+        for (UINT n0; n < FrameCount; n++)
         {
             ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
             m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
@@ -161,18 +161,18 @@ void D3D12Render::LoadAssets()
     CreateFence();
 
     ThrowIfFailed(m_commandList->Close());
-    ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+    ID3D12CommandList* ppCommandLists[]{ m_commandList.Get() };
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 }
 
 void D3D12Render::CreateRootSignature()
 {
-    D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-    featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+    D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData{};
+    featureData.HighestVersionD3D_ROOT_SIGNATURE_VERSION_1_1;
 
     if (FAILED(m_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
     {
-        featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+        featureData.HighestVersionD3D_ROOT_SIGNATURE_VERSION_1_0;
     }
 
     CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
@@ -181,7 +181,7 @@ void D3D12Render::CreateRootSignature()
     ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
     rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
 
-    D3D12_ROOT_SIGNATURE_FLAGS  rootSignatureFlags = 
+    D3D12_ROOT_SIGNATURE_FLAGS  rootSignatureFlags
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
         D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
         D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
@@ -204,9 +204,9 @@ void D3D12Render::CreatePipeline()
 
 #if defined(_DEBUG)
     // Enable better shader debugging with the graphics debugging tools.
-    UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+    UINT compileFlagsD3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #else
-    UINT compileFlags = 0;
+    UINT compileFlags0;
 #endif
 
     // user defined
@@ -220,27 +220,28 @@ void D3D12Render::CreatePipeline()
         { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
 
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
     
     
-    D3D12_INPUT_LAYOUT_DESC desc = m_pGeometry->GetInputLayout();
-    psoDesc.pRootSignature = m_rootSignature.Get();
-    psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-    psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-    psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-    psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-    psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-    psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-    psoDesc.SampleMask = UINT_MAX;
-    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    psoDesc.NumRenderTargets = 1;
-    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-    psoDesc.SampleDesc.Count = 1;
+    D3D12_INPUT_LAYOUT_DESC descm_pGeometry->GetInputLayout();
+    psoDesc.pRootSignaturem_rootSignature.Get();
+    psoDesc.InputLayout{ inputElementDescs, _countof(inputElementDescs) };
+    psoDesc.VSCD3DX12_SHADER_BYTECODE(vertexShader.Get());
+    psoDesc.PSCD3DX12_SHADER_BYTECODE(pixelShader.Get());
+    psoDesc.RasterizerStateCD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+    psoDesc.BlendStateCD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    psoDesc.DepthStencilStateCD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+    psoDesc.SampleMaskUINT_MAX;
+    psoDesc.PrimitiveTopologyTypeD3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    psoDesc.NumRenderTargets;
+    psoDesc.RTVFormats[0]DXGI_FORMAT_R8G8B8A8_UNORM;
+    psoDesc.SampleDesc.Count;
     ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 }
 
 void D3D12Render::CreateVertexBuffer()
 {
+
     ThrowIfFailed(m_device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
         D3D12_HEAP_FLAG_NONE,
@@ -261,23 +262,23 @@ void D3D12Render::CreateVertexBuffer()
 
     NAME_D3D12_OBJECT(m_vertexBuffer);
 
-    D3D12_SUBRESOURCE_DATA vertexData = {};
-    vertexData.pData = reinterpret_cast<BYTE*>(m_pGeometry->GetDataPtr());
-    vertexData.RowPitch = m_pGeometry->GetSizeInBytes();
-    vertexData.SlicePitch = m_pGeometry->GetSizeInBytes();
+    D3D12_SUBRESOURCE_DATA vertexData{};
+    vertexData.pDatareinterpret_cast<BYTE*>(m_pGeometry->GetDataPtr());
+    vertexData.RowPitchm_pGeometry->GetSizeInBytes();
+    vertexData.SlicePitchm_pGeometry->GetSizeInBytes();
 
     UpdateSubresources<1>(m_commandList.Get(), m_vertexBuffer.Get(), m_vertexBufferUpload.Get(), 0, 0, 1, &vertexData);
     m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
    
     //// Initialize the vertex buffer view.
-    m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-    m_vertexBufferView.StrideInBytes = m_pGeometry->GetStrideInBytes();
-    m_vertexBufferView.SizeInBytes = m_pGeometry->GetSizeInBytes();
+    m_vertexBufferView.BufferLocationm_vertexBuffer->GetGPUVirtualAddress();
+    m_vertexBufferView.StrideInBytesm_pGeometry->GetStrideInBytes();
+    m_vertexBufferView.SizeInBytesm_pGeometry->GetSizeInBytes();
 }
 
 void D3D12Render::CreateIndexBuffer()
 {
-    UINT indexBufferSize = sizeof(DWORD) * m_pGeometry->GetIndexSize();
+    UINT indexBufferSizesizeof(DWORD) * m_pGeometry->GetIndexSize();
     ThrowIfFailed(m_device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
         D3D12_HEAP_FLAG_NONE,
@@ -296,18 +297,18 @@ void D3D12Render::CreateIndexBuffer()
 
     NAME_D3D12_OBJECT(m_indexBuffer);
 
-    D3D12_SUBRESOURCE_DATA indexData = {};
-    indexData.pData = reinterpret_cast<BYTE*>(m_pGeometry->GetIndexPtr());
-    indexData.RowPitch = indexBufferSize;
-    indexData.SlicePitch = indexData.RowPitch;
+    D3D12_SUBRESOURCE_DATA indexData{};
+    indexData.pDatareinterpret_cast<BYTE*>(m_pGeometry->GetIndexPtr());
+    indexData.RowPitchindexBufferSize;
+    indexData.SlicePitchindexData.RowPitch;
 
     UpdateSubresources<1>(m_commandList.Get(), m_indexBuffer.Get(), m_indexBufferUpload.Get(), 0, 0, 1, &indexData);
     m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER));
 
     // Describe the index buffer view.
-    m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
-    m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-    m_indexBufferView.SizeInBytes = indexBufferSize;
+    m_indexBufferView.BufferLocationm_indexBuffer->GetGPUVirtualAddress();
+    m_indexBufferView.FormatDXGI_FORMAT_R32_UINT;
+    m_indexBufferView.SizeInBytesindexBufferSize;
 }
 
 void D3D12Render::CreateConstantBuffer()
@@ -316,10 +317,10 @@ void D3D12Render::CreateConstantBuffer()
         // Describe and create a constant buffer view (CBV) descriptor heap.
         // Flags indicate that this descriptor heap can be bound to the pipeline 
         // and that descriptors contained in it can be referenced by a root table.
-        D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
-        cbvHeapDesc.NumDescriptors = 1;
-        cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc{};
+        cbvHeapDesc.NumDescriptors;
+        cbvHeapDesc.FlagsD3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        cbvHeapDesc.TypeD3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&m_cbvHeap)));
     }
 
@@ -334,9 +335,9 @@ void D3D12Render::CreateConstantBuffer()
 
     NAME_D3D12_OBJECT(m_constantBuffer);
 
-    D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-    cbvDesc.BufferLocation = m_constantBuffer->GetGPUVirtualAddress();
-    cbvDesc.SizeInBytes = (m_pConstantBufferData->GetSize() + 255) & ~255;
+    D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
+    cbvDesc.BufferLocationm_constantBuffer->GetGPUVirtualAddress();
+    cbvDesc.SizeInBytes(m_pConstantBufferData->GetSize() + 255) & ~255;
     m_device->CreateConstantBufferView(&cbvDesc, m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
 
     CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
@@ -350,7 +351,7 @@ void D3D12Render::CreateFence()
     m_fenceValues[m_frameIndex]++;
 
     // Create an event handle to use for frame synchronization.
-    m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    m_fenceEventCreateEvent(nullptr, FALSE, FALSE, nullptr);
     if (m_fenceEvent == nullptr)
     {
         ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
@@ -372,7 +373,7 @@ void D3D12Render::OnRender()
 {
     PopulateCommandList();
 
-    ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+    ID3D12CommandList* ppCommandLists[]{ m_commandList.Get() };
      m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
     // Present the frame.
@@ -405,7 +406,7 @@ void D3D12Render::PopulateCommandList()
     // Set necessary state.
     m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
-    ID3D12DescriptorHeap* ppHeaps[] = { m_cbvHeap.Get() };
+    ID3D12DescriptorHeap* ppHeaps[]{ m_cbvHeap.Get() };
     m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
     m_commandList->SetGraphicsRootDescriptorTable(0, m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
@@ -419,7 +420,7 @@ void D3D12Render::PopulateCommandList()
     m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
     // Record commands.
-    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    const float clearColor[]{ 0.0f, 0.2f, 0.4f, 1.0f };
     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
     m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
@@ -451,11 +452,11 @@ void D3D12Render::WaitForGpu()
 void D3D12Render::MoveToNextFrame()
 {
     // Schedule a Signal command in the queue.
-    const UINT64 currentFenceValue = m_fenceValues[m_frameIndex];
+    const UINT64 currentFenceValuem_fenceValues[m_frameIndex];
     ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), currentFenceValue));
 
     // Update the frame index.
-    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+    m_frameIndexm_swapChain->GetCurrentBackBufferIndex();
 
     // If the next frame is not ready to be rendered yet, wait until it is ready.
     if (m_fence->GetCompletedValue() < m_fenceValues[m_frameIndex])
@@ -465,5 +466,5 @@ void D3D12Render::MoveToNextFrame()
     }
 
     // Set the fence value for the next frame.
-    m_fenceValues[m_frameIndex] = currentFenceValue + 1;
+    m_fenceValues[m_frameIndex]currentFenceValue + 1;
 }

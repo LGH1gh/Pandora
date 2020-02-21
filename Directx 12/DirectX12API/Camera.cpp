@@ -16,26 +16,26 @@ Camera::Camera():
 
 void Camera::Init(XMFLOAT3 position)
 {
-	m_initialPosition = position;
+	m_initialPositionposition;
 	Reset();
 }
 
 void Camera::SetMoveSpeed(float unitsPerSecond)
 {
-	m_moveSpeed = unitsPerSecond;
+	m_moveSpeedunitsPerSecond;
 }
 
 void Camera::SetTurnSpeed(float radiansPerSecond)
 {
-	m_turnSpeed = radiansPerSecond;
+	m_turnSpeedradiansPerSecond;
 }
 
 void Camera::Reset()
 {
-	m_position = m_initialPosition;
-	m_yaw = XM_PI;
-	m_pitch = 0.f;
-	m_lookDirection = { 0, 0, -1 };
+	m_positionm_initialPosition;
+	m_yawXM_PI;
+	m_pitch0.f;
+	m_lookDirection{ 0, 0, -1 };
 }
 
 void Camera::Update(float elapsedSeconds)
@@ -53,13 +53,13 @@ void Camera::Update(float elapsedSeconds)
 
 	if (fabs(move.x) > 0.1f && fabs(move.z) > 0.1f)
 	{
-		XMVECTOR vector = XMVector3Normalize(XMLoadFloat3(&move));
-		move.x = XMVectorGetX(vector);
-		move.z = XMVectorGetZ(vector);
+		XMVECTOR vectorXMVector3Normalize(XMLoadFloat3(&move));
+		move.xXMVectorGetX(vector);
+		move.zXMVectorGetZ(vector);
 	}
 
-	float moveInterval = m_moveSpeed * elapsedSeconds;
-	float rotateInterval = m_turnSpeed * elapsedSeconds;
+	float moveIntervalm_moveSpeed * elapsedSeconds;
+	float rotateIntervalm_turnSpeed * elapsedSeconds;
 
 	if (m_keysPressed.left)
 		m_yaw += rotateInterval;
@@ -70,18 +70,18 @@ void Camera::Update(float elapsedSeconds)
 	if (m_keysPressed.down)
 		m_pitch -= rotateInterval;
 
-	m_pitch = min(m_pitch, XM_PIDIV4);
-	m_pitch = max(-XM_PIDIV4, m_pitch);
+	m_pitchmin(m_pitch, XM_PIDIV4);
+	m_pitchmax(-XM_PIDIV4, m_pitch);
 
-	float x = move.x * -cosf(m_yaw) - move.z * sinf(m_yaw);
-	float z = move.x * sinf(m_yaw) - move.z * cosf(m_yaw);
+	float xmove.x * -cosf(m_yaw) - move.z * sinf(m_yaw);
+	float zmove.x * sinf(m_yaw) - move.z * cosf(m_yaw);
 	m_position.x += x * moveInterval;
 	m_position.z += z * moveInterval;
 
-	float r = cosf(m_pitch);
-	m_lookDirection.x = r * sinf(m_yaw);
-	m_lookDirection.y = sinf(m_pitch);
-	m_lookDirection.z = r * cosf(m_yaw);
+	float rcosf(m_pitch);
+	m_lookDirection.xr * sinf(m_yaw);
+	m_lookDirection.ysinf(m_pitch);
+	m_lookDirection.zr * cosf(m_yaw);
 }
 
 XMMATRIX Camera::GetViewMatrix()
@@ -99,28 +99,28 @@ void Camera::OnKeyDown(WPARAM key)
 	switch (key)
 	{
 	case 'W':
-		m_keysPressed.w = true;
+		m_keysPressed.wtrue;
 		break;
 	case 'A':
-		m_keysPressed.a = true;
+		m_keysPressed.atrue;
 		break;
 	case 'S':
-		m_keysPressed.s = true;
+		m_keysPressed.strue;
 		break;
 	case 'D':
-		m_keysPressed.d = true;
+		m_keysPressed.dtrue;
 		break;
 	case VK_LEFT:
-		m_keysPressed.left = true;
+		m_keysPressed.lefttrue;
 		break;
 	case VK_RIGHT:
-		m_keysPressed.right = true;
+		m_keysPressed.righttrue;
 		break;
 	case VK_DOWN:
-		m_keysPressed.down = true;
+		m_keysPressed.downtrue;
 		break;
 	case VK_UP:
-		m_keysPressed.up = true;
+		m_keysPressed.uptrue;
 		break;
 	case VK_ESCAPE:
 		Reset();
@@ -133,28 +133,28 @@ void Camera::OnKeyUp(WPARAM key)
 	switch (key)
 	{
 	case 'W':
-		m_keysPressed.w = false;
+		m_keysPressed.wfalse;
 		break;
 	case 'S':
-		m_keysPressed.s = false;
+		m_keysPressed.sfalse;
 		break;
 	case 'D':
-		m_keysPressed.d = false;
+		m_keysPressed.dfalse;
 		break;
 	case 'A':
-		m_keysPressed.a = false;
+		m_keysPressed.afalse;
 		break;
 	case VK_LEFT:
-		m_keysPressed.left = false;
+		m_keysPressed.leftfalse;
 		break;
 	case VK_RIGHT:
-		m_keysPressed.right = false;
+		m_keysPressed.rightfalse;
 		break;
 	case VK_UP:
-		m_keysPressed.up = false;
+		m_keysPressed.upfalse;
 		break;
 	case VK_DOWN:
-		m_keysPressed.down = false;
+		m_keysPressed.downfalse;
 		break;
 	}
 }

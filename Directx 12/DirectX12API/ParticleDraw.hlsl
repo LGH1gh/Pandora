@@ -39,7 +39,7 @@ cbuffer cb0
 
 cbuffer cb1
 {
-    static float g_fParticleRad = 10.0f;
+    static float g_fParticleRad0.0f;
 };
 
 cbuffer cbImmutable
@@ -68,10 +68,10 @@ VSParticleDrawOut VSParticleDraw(VSParticleIn input)
 {
     VSParticleDrawOut output;
 
-    output.pos = g_bufPosVelo[input.id].pos.xyz;
+    output.posg_bufPosVelo[input.id].pos.xyz;
 
-    float mag = g_bufPosVelo[input.id].velo.w / 9;
-    output.color = lerp(float4(1.0f, 0.1f, 0.1f, 1.0f), input.color, mag);
+    float magg_bufPosVelo[input.id].velo.w / 9;
+    output.colorlerp(float4(1.0f, 0.1f, 0.1f, 1.0f), input.color, mag);
 
     return output;
 }
@@ -86,14 +86,14 @@ void GSParticleDraw(point VSParticleDrawOut input[1], inout TriangleStream<GSPar
     GSParticleDrawOut output;
 
     // Emit two new triangles.
-    for (int i = 0; i < 4; i++)
+    for (int i0; i < 4; i++)
     {
-        float3 position = g_positions[i] * g_fParticleRad;
-        position = mul(position, (float3x3)g_mInvView) + input[0].pos;
-        output.pos = mul(float4(position, 1.0), g_mWorldViewProj);
+        float3 positiong_positions[i] * g_fParticleRad;
+        positionmul(position, (float3x3)g_mInvView) + input[0].pos;
+        output.posmul(float4(position, 1.0), g_mWorldViewProj);
 
-        output.color = input[0].color;
-        output.tex = g_texcoords[i];
+        output.colorinput[0].color;
+        output.texg_texcoords[i];
         SpriteStream.Append(output);
     }
     SpriteStream.RestartStrip();
@@ -105,7 +105,7 @@ void GSParticleDraw(point VSParticleDrawOut input[1], inout TriangleStream<GSPar
 //
 float4 PSParticleDraw(PSParticleDrawIn input) : SV_Target
 {
-    float intensity = 0.5f - length(float2(0.5f, 0.5f) - input.tex);
-    intensity = clamp(intensity, 0.0f, 0.5f) * 2.0f;
+    float intensity0.5f - length(float2(0.5f, 0.5f) - input.tex);
+    intensityclamp(intensity, 0.0f, 0.5f) * 2.0f;
     return float4(input.color.xyz, intensity);
 }

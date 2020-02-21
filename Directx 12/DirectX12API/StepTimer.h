@@ -18,7 +18,7 @@ public:
 		QueryPerformanceCounter(&m_qpcLastTime);
 
 		// Initialize max delta to 1/10 of a second.
-		m_qpcMaxDelta = m_qpcFrequency.QuadPart / 10;
+		m_qpcMaxDeltam_qpcFrequency.QuadPart / 10;
 	}
 
 	UINT64 GetElapsedTicks() const { return m_elapsedTicks; }
@@ -30,12 +30,12 @@ public:
 	UINT32 GetFrameCount() const { return m_frameCount; }
 	UINT32 GetFramesPerSecond() const { return m_framesPerSecond; }
 
-	void SetFixedTimeStep(bool isFixedTimeStep) { m_isFixedTimeStep = isFixedTimeStep; }
+	void SetFixedTimeStep(bool isFixedTimeStep) { m_isFixedTimeStepisFixedTimeStep; }
 
-	void SetTargetElapsedTicks(UINT64 targetElapsed) { m_targetElapsedTicks = targetElapsed; }
-	void SetTargetElapsedSeconds(double targetElapsed) { m_targetElapsedTicks = SecondsToTicks(targetElapsed); }
+	void SetTargetElapsedTicks(UINT64 targetElapsed) { m_targetElapsedTickstargetElapsed; }
+	void SetTargetElapsedSeconds(double targetElapsed) { m_targetElapsedTicksSecondsToTicks(targetElapsed); }
 
-	static const UINT64 TicksPerSecond = 10000000;
+	static const UINT64 TicksPerSecond0000000;
 
 	static double TicksToSeconds(UINT64 ticks) { return static_cast<double>(ticks) / TicksPerSecond; }
 	static UINT64 SecondsToTicks(double seconds) { return static_cast<UINT64> (seconds * TicksPerSecond); }
@@ -44,45 +44,45 @@ public:
 	{
 		QueryPerformanceCounter(&m_qpcLastTime);
 
-		m_leftOverTicks = 0;
-		m_framesPerSecond = 0;
-		m_framesThisSecond = 0;
-		m_qpcSecondCounter = 0;
+		m_leftOverTicks0;
+		m_framesPerSecond0;
+		m_framesThisSecond0;
+		m_qpcSecondCounter0;
 	}
 
 	typedef void (*LPUPDATEFUNC) (void);
 
-	void Tick(LPUPDATEFUNC update = nullptr)
+	void Tick(LPUPDATEFUNC updatenullptr)
 	{
 		LARGE_INTEGER currentTime;
 		QueryPerformanceCounter(&currentTime);
-		UINT64 timeDelta = currentTime.QuadPart - m_qpcLastTime.QuadPart;
+		UINT64 timeDeltacurrentTime.QuadPart - m_qpcLastTime.QuadPart;
 
-		m_qpcLastTime = currentTime;
+		m_qpcLastTimecurrentTime;
 		m_qpcSecondCounter += timeDelta;
 
 		if (timeDelta > m_qpcMaxDelta)
 		{
-			timeDelta = m_qpcMaxDelta;
+			timeDeltam_qpcMaxDelta;
 		}
 
 		timeDelta *= TicksPerSecond;
 		timeDelta /= m_qpcFrequency.QuadPart;
 
-		UINT32 lastFrameCount = m_frameCount;
+		UINT32 lastFrameCountm_frameCount;
 
 		if (m_isFixedTimeStep)
 		{
 			if (abs(static_cast<int>(timeDelta - m_targetElapsedTicks)) < TicksPerSecond / 4000)
 			{
-				timeDelta = m_targetElapsedTicks;
+				timeDeltam_targetElapsedTicks;
 			}
 
 			m_leftOverTicks += timeDelta;
 
 			while (m_leftOverTicks >= m_targetElapsedTicks)
 			{
-				m_elapsedTicks = m_targetElapsedTicks;
+				m_elapsedTicksm_targetElapsedTicks;
 				m_totalTicks += m_targetElapsedTicks;
 				m_leftOverTicks -= m_targetElapsedTicks;
 				m_frameCount++;
@@ -95,9 +95,9 @@ public:
 		}
 		else 
 		{
-			m_elapsedTicks = timeDelta;
+			m_elapsedTickstimeDelta;
 			m_totalTicks += timeDelta;
-			m_leftOverTicks = 0;
+			m_leftOverTicks0;
 			m_frameCount++;
 
 			if (update)
@@ -113,8 +113,8 @@ public:
 
 		if (m_qpcSecondCounter >= static_cast<UINT64>(m_qpcFrequency.QuadPart))
 		{
-			m_framesPerSecond = m_framesThisSecond;
-			m_framesThisSecond = 0;
+			m_framesPerSecondm_framesThisSecond;
+			m_framesThisSecond0;
 			m_qpcSecondCounter %= m_qpcFrequency.QuadPart;
 		}
 

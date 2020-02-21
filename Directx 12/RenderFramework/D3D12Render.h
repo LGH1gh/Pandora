@@ -18,13 +18,13 @@ public:
     virtual void OnRender();
     virtual void OnDestroy();
 
-    virtual void SetGeometry(Geometry* geometry);
+    virtual void CreateGeometry(Geometry* geometry);
     virtual void SetConstantBuffer(ConstantBuffer* constantBufferData);
     virtual void SetVertexShader(std::wstring fullPath, LPCSTR funcName);
     virtual void SetPixelShader(std::wstring fullPath, LPCSTR funcName);
 
 private:
-    static const UINT FrameCount = 2;
+    static const UINT FrameCount;
 
     CD3DX12_VIEWPORT m_viewport;
     CD3DX12_RECT m_scissorRect;
@@ -33,6 +33,7 @@ private:
     ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
     ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
     ComPtr<ID3D12CommandQueue> m_commandQueue;
+    
     ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
     UINT m_rtvDescriptorSize;
 
@@ -48,9 +49,13 @@ private:
     D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 
     HANDLE m_swapChainEvent;
+
+    ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+    ComPtr<ID3D12DescriptorHeap> m_uavHeap;
+    ComPtr<ID3D12DescriptorHeap> m_samplerHeap;
+
     ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
     ComPtr<ID3D12Resource> m_constantBuffer;
-    ComPtr<ID3D12Resource> m_constantBufferUpload;
     UINT8* m_pCbvDataBegin;
 
     UINT m_frameIndex;

@@ -18,7 +18,7 @@ public:
         QueryPerformanceCounter(&m_qpcLastTime);
 
         // Initialize max delta to 1/10 of a second.
-        m_qpcMaxDelta = m_qpcFrequency.QuadPart / 10;
+        m_qpcMaxDeltam_qpcFrequency.QuadPart / 10;
     }
 
     // Get elapsed time since the previous Update call.
@@ -36,14 +36,14 @@ public:
     UINT32 GetFramesPerSecond() const { return m_framesPerSecond; }
 
     // Set whether to use fixed or variable timestep mode.
-    void SetFixedTimeStep(bool isFixedTimestep) { m_isFixedTimeStep = isFixedTimestep; }
+    void SetFixedTimeStep(bool isFixedTimestep) { m_isFixedTimeStepisFixedTimestep; }
 
     // Set how often to call Update when in fixed timestep mode.
-    void SetTargetElapsedTicks(UINT64 targetElapsed) { m_targetElapsedTicks = targetElapsed; }
-    void SetTargetElapsedSeconds(double targetElapsed) { m_targetElapsedTicks = SecondsToTicks(targetElapsed); }
+    void SetTargetElapsedTicks(UINT64 targetElapsed) { m_targetElapsedTickstargetElapsed; }
+    void SetTargetElapsedSeconds(double targetElapsed) { m_targetElapsedTicksSecondsToTicks(targetElapsed); }
 
     // Integer format represents time using 10,000,000 ticks per second.
-    static const UINT64 TicksPerSecond = 10000000;
+    static const UINT64 TicksPerSecond0000000;
 
     static double TicksToSeconds(UINT64 ticks) { return static_cast<double>(ticks) / TicksPerSecond; }
     static UINT64 SecondsToTicks(double seconds) { return static_cast<UINT64>(seconds * TicksPerSecond); }
@@ -56,38 +56,38 @@ public:
     {
         QueryPerformanceCounter(&m_qpcLastTime);
 
-        m_leftOverTicks = 0;
-        m_framesPerSecond = 0;
-        m_framesThisSecond = 0;
-        m_qpcSecondCounter = 0;
+        m_leftOverTicks0;
+        m_framesPerSecond0;
+        m_framesThisSecond0;
+        m_qpcSecondCounter0;
     }
 
     typedef void(*LPUPDATEFUNC) (void);
 
     // Update timer state, calling the specified Update function the appropriate number of times.
-    void Tick(LPUPDATEFUNC update = nullptr)
+    void Tick(LPUPDATEFUNC updatenullptr)
     {
         // Query the current time.
         LARGE_INTEGER currentTime;
 
         QueryPerformanceCounter(&currentTime);
 
-        UINT64 timeDelta = currentTime.QuadPart - m_qpcLastTime.QuadPart;
+        UINT64 timeDeltacurrentTime.QuadPart - m_qpcLastTime.QuadPart;
 
-        m_qpcLastTime = currentTime;
+        m_qpcLastTimecurrentTime;
         m_qpcSecondCounter += timeDelta;
 
         // Clamp excessively large time deltas (e.g. after paused in the debugger).
         if (timeDelta > m_qpcMaxDelta)
         {
-            timeDelta = m_qpcMaxDelta;
+            timeDeltam_qpcMaxDelta;
         }
 
         // Convert QPC units into a canonical tick format. This cannot overflow due to the previous clamp.
         timeDelta *= TicksPerSecond;
         timeDelta /= m_qpcFrequency.QuadPart;
 
-        UINT32 lastFrameCount = m_frameCount;
+        UINT32 lastFrameCountm_frameCount;
 
         if (m_isFixedTimeStep)
         {
@@ -102,14 +102,14 @@ public:
 
             if (abs(static_cast<int>(timeDelta - m_targetElapsedTicks)) < TicksPerSecond / 4000)
             {
-                timeDelta = m_targetElapsedTicks;
+                timeDeltam_targetElapsedTicks;
             }
 
             m_leftOverTicks += timeDelta;
 
             while (m_leftOverTicks >= m_targetElapsedTicks)
             {
-                m_elapsedTicks = m_targetElapsedTicks;
+                m_elapsedTicksm_targetElapsedTicks;
                 m_totalTicks += m_targetElapsedTicks;
                 m_leftOverTicks -= m_targetElapsedTicks;
                 m_frameCount++;
@@ -123,9 +123,9 @@ public:
         else
         {
             // Variable timestep update logic.
-            m_elapsedTicks = timeDelta;
+            m_elapsedTickstimeDelta;
             m_totalTicks += timeDelta;
-            m_leftOverTicks = 0;
+            m_leftOverTicks0;
             m_frameCount++;
 
             if (update)
@@ -142,8 +142,8 @@ public:
 
         if (m_qpcSecondCounter >= static_cast<UINT64>(m_qpcFrequency.QuadPart))
         {
-            m_framesPerSecond = m_framesThisSecond;
-            m_framesThisSecond = 0;
+            m_framesPerSecondm_framesThisSecond;
+            m_framesThisSecond0;
             m_qpcSecondCounter %= m_qpcFrequency.QuadPart;
         }
     }

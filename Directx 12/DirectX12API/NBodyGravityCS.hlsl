@@ -1,21 +1,21 @@
-static float softeningSquared = 0.0012500000f * 0.12500000f;
-static float g_fG = 6.67300e-11f * 10000.f;
-static float g_fParticleMass = g_fG * 10000.f * 10000.f;
+static float softeningSquared0.0012500000f * 0.12500000f;
+static float g_fG.67300e-11f * 10000.f;
+static float g_fParticleMassg_fG * 10000.f * 10000.f;
 
 #define blocksize 128
 groupshared float4 sharedPos[blocksize];
 
 void bodyBodyInteraction(inout float3 ai, float4 bj, float4 bi, float mass, int particles)
 {
-	float3 r = bj.xyz - bi.xyz;
+	float3 rbj.xyz - bi.xyz;
 
-	float distSqr = dot(r, r);
+	float distSqrdot(r, r);
 	distSqr += softeningSquared;
 
-	float invDist = 1.f / sqrt(distSqr);
-	float invDistCube = invDist * invDist * invDist;
+	float invDist.f / sqrt(distSqr);
+	float invDistCubeinvDist * invDist * invDist;
 
-	float s = mass * invDistCube * particles;
+	float smass * invDistCube * particles;
 
 	ai += r * s;
 }
@@ -39,19 +39,19 @@ RWStructuredBuffer<PosVelo> newPosVelo : register(u0);
 [numthreads(blocksize, 1, 1)]
 void CSMain(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint GI : SV_GroupIndex)
 {
-	float4 pos = oldPosVelo[DTid.x].pos;
-	float4 vel = oldPosVelo[DTid.x].velo;
-	float3 accel = 0;
-	float mass = g_fParticleMass;
+	float4 posoldPosVelo[DTid.x].pos;
+	float4 veloldPosVelo[DTid.x].velo;
+	float3 accel0;
+	float massg_fParticleMass;
 
 	[loop]
-	for (uint tile = 0; tile < g_param.y; tile++)
+	for (uint tile0; tile < g_param.y; tile++)
 	{
-		sharedPos[GI] = oldPosVelo[tile * blocksize + GI].pos;
+		sharedPos[GI]oldPosVelo[tile * blocksize + GI].pos;
 		GroupMemoryBarrierWithGroupSync();
 
 		[unroll]
-		for (uint counter = 0; counter < blocksize; counter += 8)
+		for (uint counter0; counter < blocksize; counter += 8)
 		{
 			bodyBodyInteraction(accel, sharedPos[counter], pos, mass, 1);
 			bodyBodyInteraction(accel, sharedPos[counter + 1], pos, mass, 1);
@@ -66,7 +66,7 @@ void CSMain(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid
 		GroupMemoryBarrierWithGroupSync();
 	}
 
-	const int tooManyParticles = g_param.y * blocksize - g_param.x;
+	const int tooManyParticlesg_param.y * blocksize - g_param.x;
 	bodyBodyInteraction(accel, float4(0, 0, 0, 0), pos, mass, -tooManyParticles);
 
 	vel.xyz += accel.xyz * g_paramf.x;
@@ -75,8 +75,8 @@ void CSMain(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid
 
 	if (DTid.x < g_param.x)
 	{
-		newPosVelo[DTid.x].pos = pos;
-		newPosVelo[DTid.x].velo = float4(vel.xyz, length(accel));
+		newPosVelo[DTid.x].pospos;
+		newPosVelo[DTid.x].velofloat4(vel.xyz, length(accel));
 	}
 }
 

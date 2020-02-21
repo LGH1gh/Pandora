@@ -16,18 +16,18 @@ public:
 
     SceneConstantBuffer()
     {
-        data.offset = XMFLOAT4(0.0, 0.0, 0.0, 0.0);
+        data.offsetXMFLOAT4(0.0, 0.0, 0.0, 0.0);
     }
 
 	virtual void OnUpdate()
 	{
-        const float translationSpeed = 0.005f;
-        const float offsetBounds = 1.00f;
+        const float translationSpeed0.005f;
+        const float offsetBounds.00f;
         data.offset.x += translationSpeed;
 
         if (data.offset.x > offsetBounds)
         {
-            data.offset.x = -offsetBounds;
+            data.offset.x-offsetBounds;
         }
 	}
 
