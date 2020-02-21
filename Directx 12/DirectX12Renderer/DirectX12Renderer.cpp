@@ -97,7 +97,7 @@ void DirectX12Renderer::LoadPipeline()
         m_commandAllocators[n]->Init(m_device.Get());
     }
     
-    ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[m_frameIndex]->m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_graphicsCommandList)));
+    ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[m_frameIndex]->commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_graphicsCommandList)));
     m_graphicsCommandList->Close();
     {
         ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
@@ -155,8 +155,8 @@ void DirectX12Renderer::CreateBlendState(Blend src, Blend dst, BlendOperator mod
 {
     bool blendEnble = (src != BLEND_ONE || dst != BLEND_ZERO);
 
-    m_blendState.m_blendDesc.AlphaToCoverageEnable = alphaToCoverageEnable;
-    m_blendState.m_blendDesc.IndependentBlendEnable = false;
+    m_blendState.blendDesc.AlphaToCoverageEnable = alphaToCoverageEnable;
+    m_blendState.blendDesc.IndependentBlendEnable = false;
 
     static const D3D12_BLEND blend_factors[] =
     {
@@ -183,15 +183,95 @@ void DirectX12Renderer::CreateBlendState(Blend src, Blend dst, BlendOperator mod
 
     for (int i = 0; i < 8; ++i)
     {
-        m_blendState.m_blendDesc.RenderTarget[i].BlendEnable          = blendEnble;
+        m_blendState.blendDesc.RenderTarget[i].BlendEnable          = blendEnble;
 
-        m_blendState.m_blendDesc.RenderTarget[i].BlendOp              = blend_modes[mode];
-        m_blendState.m_blendDesc.RenderTarget[i].BlendOpAlpha         = blend_modes[mode];
-        m_blendState.m_blendDesc.RenderTarget[i].SrcBlend             = blend_factors[src];
-        m_blendState.m_blendDesc.RenderTarget[i].SrcBlendAlpha        = blend_factors[src];
-        m_blendState.m_blendDesc.RenderTarget[i].DestBlend            = blend_factors[dst];
-        m_blendState.m_blendDesc.RenderTarget[i].DestBlendAlpha       = blend_factors[dst];
+        m_blendState.blendDesc.RenderTarget[i].BlendOp              = blend_modes[mode];
+        m_blendState.blendDesc.RenderTarget[i].BlendOpAlpha         = blend_modes[mode];
+        m_blendState.blendDesc.RenderTarget[i].SrcBlend             = blend_factors[src];
+        m_blendState.blendDesc.RenderTarget[i].SrcBlendAlpha        = blend_factors[src];
+        m_blendState.blendDesc.RenderTarget[i].DestBlend            = blend_factors[dst];
+        m_blendState.blendDesc.RenderTarget[i].DestBlendAlpha       = blend_factors[dst];
 
-        m_blendState.m_blendDesc.RenderTarget[i].RenderTargetWriteMask = (UINT8)mask;
+        m_blendState.blendDesc.RenderTarget[i].RenderTargetWriteMask = (UINT8)mask;
     }
+}
+
+void DirectX12Renderer::CreateRootSignature(const Blob& blob)
+{
+    ThrowIfFailed(m_device->CreateRootSignature(0, blob.m_address, blob.m_size, IID_PPV_ARGS(&m_rootSignature.rootSignature)));
+}
+
+void DirectX12Renderer::CreatePipeline(PipelineParams* params)
+{
+    static const DXGI_FORMAT dxgi_format[] =
+    {
+        DXGI_FORMAT_R32G32B32A32_FLOAT,
+        DXGI_FORMAT_R16G16B16A16_FLOAT,
+        DXGI_FORMAT_R32G32B32A32_UINT,
+        DXGI_FORMAT_R16G16B16A16_UINT,
+
+        DXGI_FORMAT_R32G32B32_FLOAT,
+        DXGI_FORMAT_R32G32B32_UINT,
+
+        DXGI_FORMAT_R32G32_FLOAT,
+        DXGI_FORMAT_R16G16_FLOAT,
+        DXGI_FORMAT_R32G32_UINT,
+        DXGI_FORMAT_R16G16_UINT,
+
+        DXGI_FORMAT_R32_FLOAT,
+        DXGI_FORMAT_R32_UINT,
+    };
+
+    static const UINT dxgi_format_size[] =
+    {
+        16, 8, 16, 8,
+        12, 12,
+        8, 4, 8, 4,
+        4, 4
+    };
+
+    D3D12_INPUT_ELEMENT_DESC inputElementDesc[16];
+    UINT offsets[4] = {};
+
+    for (UINT n = 0; n < params->attributeCount; ++n)
+    {
+        UINT stream = params->attributes[n].stream;
+        AttributeFormat format = params->attributes[n].format;
+
+        inputElementDesc[n].SemanticName = params->attributes[n].name;
+        inputElementDesc[n].SemanticIndex = 0;
+        inputElementDesc[n].Format = dxgi_format[format];
+        inputElementDesc[n].InputSlot = stream;
+        inputElementDesc[n].AlignedByteOffset = offsets[stream];
+        inputElementDesc[n].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+        inputElementDesc[n].InstanceDataStepRate = 0;
+
+        offsets[stream] += dxgi_format_size[format];
+    }
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+    psoDesc.pRootSignature = params->rootSignature.rootSignature.Get();
+    psoDesc.InputLayout = { inputElementDesc, params->attributeCount };
+    psoDesc.VS.BytecodeLength = params->vs.size;
+    psoDesc.VS.pShaderBytecode = params->vs.address;
+    psoDesc.PS.BytecodeLength = params->ps.size;
+    psoDesc.PS.pShaderBytecode = params->ps.address;
+    psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+    psoDesc.RasterizerState.CullMode = (D3D12_CULL_MODE)(params->cullMode + 1);
+    psoDesc.RasterizerState.DepthClipEnable = true;
+    psoDesc.RasterizerState.MultisampleEnable = true;
+    psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = 0xF;
+    if (params->blendState)
+    {
+
+    }
+    psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    psoDesc.DepthStencilState.DepthEnable = FALSE;
+    psoDesc.DepthStencilState.StencilEnable = FALSE;
+    psoDesc.SampleMask = UINT_MAX;
+    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    psoDesc.NumRenderTargets = 1;
+    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    psoDesc.SampleDesc.Count = 1;
+    psoDesc.PrimitiveTopologyType = (D3D12_PRIMITIVE_TOPOLOGY_TYPE)params->primitiveTopologyType;
 }

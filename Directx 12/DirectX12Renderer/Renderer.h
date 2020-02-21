@@ -3,6 +3,27 @@
 #include "RendererHelper.h"
 
 typedef
+enum CullMode : UINT8
+{
+    CULL_NONE,
+    CULL_FRONT,
+    CULL_BACK
+}   CullMode;
+
+typedef
+enum ComparisonFunc
+{
+    COMPARISON_FUNC_NEVER,
+    COMPARISON_FUNC_LESS,
+    COMPARISON_FUNC_EQUAL,
+    COMPARISON_FUNC_LESS_EQUAL,
+    COMPARISON_FUNC_GREATER,
+    COMPARISON_FUNC_NOT_EQUAL,
+    COMPARISON_FUNC_GREATER_EQUAL,
+    COMPARISON_FUNC_ALWAYS
+} 	COMPARISON_FUNC;
+
+typedef
 enum Blend
 {
     BLEND_ZERO,
@@ -35,6 +56,44 @@ enum BlendOperator
 } 	BlendOperator;
 
 typedef
+enum PrimitiveTopologyType
+{
+    PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED = 0,
+    PRIMITIVE_TOPOLOGY_TYPE_POINT,
+    PRIMITIVE_TOPOLOGY_TYPE_LINE,
+    PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+    PRIMITIVE_TOPOLOGY_TYPE_PATCH
+} 	PrimitiveTopologyType;
+
+typedef
+enum AttributeFormat
+{
+    ATTRIBUTE_FORMAT_FLOAT4_32,
+    ATTRIBUTE_FORMAT_FLOAT4_16,
+    ATTRIBUTE_FORMAT_UINT4_32,
+    ATTRIBUTE_FORMAT_UINT4_16,
+
+    ATTRIBUTE_FORMAT_FLOAT3_32,
+    ATTRIBUTE_FORMAT_UINT3_32,
+
+    ATTRIBUTE_FORMAT_FLOAT2_32,
+    ATTRIBUTE_FORMAT_FLOAT2_16,
+    ATTRIBUTE_FORMAT_UINT2_32,
+    ATTRIBUTE_FORMAT_UINT2_16,
+
+    ATTRIBUTE_FORMAT_FLOAT1_32,
+    ATTRIBUTE_FORMAT_UINT1_32,
+   
+} AttributeFormat;
+
+struct AttributeDesc
+{
+    UINT stream;
+    AttributeFormat format;
+    const char* name;
+};
+
+typedef
 enum HeapType
 {
 	HEAP_TYPE_DEFAULT,
@@ -43,22 +102,40 @@ enum HeapType
 	HEAP_TYPE_CUSTOM
 } 	HeapType;
 
+
+
 struct Blob
 {
     Blob() = default;
     Blob(const void* address, size_t size) :
-        m_address(address),
-        m_size(size)
+        address(address),
+        size(size)
     {}
 
 
-    const void* m_address;
-    size_t m_size;
+    const void* address;
+    size_t size;
 };
 
 struct PipelineParams
 {
-    RootSignature m_rootSignature;
+    ComPtr<RootSignature> rootSignature;
+    Blob vs{ nullptr, 0 };
+    Blob gs{ nullptr, 0 };
+    Blob ps{ nullptr, 0 };
+
+   
+    PrimitiveTopologyType primitiveTopologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+    const AttributeDesc* attributes = nullptr;
+    UINT attributeCount = 0;
+
+    BlendState blendState;
+    CullMode cullMode = CULL_NONE;
+
+    bool depthTest = false;
+    bool depthWrite = false;
+    ComparisonFunc depthFunc = COMPARISON_FUNC_GREATER;
 };
 
 

@@ -1,12 +1,13 @@
 #pragma once
 
-#include "Renderer.h"
 #include <d3d12.h>
 #include "d3dx12.h"
 
 #include <dxgi1_4.h>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
+
+#include "Renderer.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -18,7 +19,7 @@ struct DescriptorHeap
 	ComPtr<ID3D12DescriptorHeap> m_descHeap;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_cpuDescStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_gpuDescStart;
-	UINT m_descSize;
+	size_t m_descSize;
 
 	void Init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT numDescriptors, bool shaderVisible)
 	{
@@ -40,7 +41,7 @@ struct DescriptorHeap
 		return handle;
 	}
 
-	inline D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle(UINT offset) const
+	inline D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle(UINT64 offset) const
 	{
 		D3D12_GPU_DESCRIPTOR_HANDLE handle = m_gpuDescStart;
 		handle.ptr += offset * m_descSize;
@@ -50,7 +51,7 @@ struct DescriptorHeap
 
 struct CommandAllocator
 {
-	ComPtr<ID3D12CommandAllocator> m_commandAllocator;
+	ComPtr<ID3D12CommandAllocator> commandAllocator;
 
 	void Init(ID3D12Device* device)
 	{
@@ -60,18 +61,18 @@ struct CommandAllocator
 
 struct BlendState
 {
-	D3D12_BLEND_DESC m_blendDesc;
+	D3D12_BLEND_DESC blendDesc;
 };
 
 struct Texture
 {
-	ComPtr<ID3D12Resource> m_texture;
+	ComPtr<ID3D12Resource> texture;
 	
 };
 
 struct RootSignature
 {
-	ComPtr<ID3D12RootSignature> m_rootSignature;
+	ComPtr<ID3D12RootSignature> rootSignature;
 };
 
 class DirectX12Renderer : public Renderer
@@ -92,7 +93,6 @@ protected:
 	ComPtr<ID3D12GraphicsCommandList> m_graphicsCommandList;
 	ComPtr<ID3D12CommandAllocator> m_commandAllocator[FrameCount];
 
-	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 	ComPtr<CommandAllocator> m_commandAllocators[FrameCount];
 
 	UINT m_frameIndex;
@@ -106,9 +106,11 @@ protected:
 	ComPtr<DescriptorHeap> m_samplerHeap;
 	
 	BlendState m_blendState;
+	RootSignature m_rootSignature;
 
 	void CreateBlendState(Blend src, Blend dst, BlendOperator mode, UINT mask, bool alphaToCoverageEnable);
-	void CreatePipeline(const PipelineParams params);
+	void CreateRootSignature(const Blob& blob);
+	void CreatePipeline(PipelineParams* params);
 
 	void LoadPipeline();
 	void LoadAssets();
