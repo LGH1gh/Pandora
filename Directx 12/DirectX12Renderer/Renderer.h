@@ -1,6 +1,56 @@
 #pragma once
-#include "Win32Application.h"
 #include "RendererHelper.h"
+#include "ImageTools.h"
+#include "Vector.h"
+
+static const int FrameCount = 2;
+
+typedef struct SDevice* Device;
+typedef struct SContext* Context;
+typedef struct SDescriptorHeap* DescriptorHeap;
+typedef struct SCommandAllocator* CommandAllocator;
+typedef struct SBlendState* BlendState;
+typedef struct STexture* Texture;
+typedef struct SRootSignature* RootSignature;
+typedef struct SRenderPass* RenderPass;
+typedef struct SPipeline* Pipeline;
+typedef struct SVertexSetup* VertexSetup;
+typedef struct SBuffer* Buffer;
+typedef struct SResourceTable* ResourceTable;
+typedef struct SSamplerTable* SamplerTable;
+typedef struct SRenderSetup* RenderSetup;
+typedef struct SBlob* Blob;
+
+typedef
+enum ResourceState
+{
+    RESOURCE_STATE_COMMON = 0,
+    RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER = 0x1,
+    RESOURCE_STATE_INDEX_BUFFER = 0x2,
+    RESOURCE_STATE_RENDER_TARGET = 0x4,
+    RESOURCE_STATE_UNORDERED_ACCESS = 0x8,
+    RESOURCE_STATE_DEPTH_WRITE = 0x10,
+    RESOURCE_STATE_DEPTH_READ = 0x20,
+    RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE = 0x40,
+    RESOURCE_STATE_PIXEL_SHADER_RESOURCE = 0x80,
+    RESOURCE_STATE_STREAM_OUT = 0x100,
+    RESOURCE_STATE_INDIRECT_ARGUMENT = 0x200,
+    RESOURCE_STATE_COPY_DEST = 0x400,
+    RESOURCE_STATE_COPY_SOURCE = 0x800,
+    RESOURCE_STATE_RESOLVE_DEST = 0x1000,
+    RESOURCE_STATE_RESOLVE_SOURCE = 0x2000,
+    RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE = 0x400000,
+    RESOURCE_STATE_SHADING_RATE_SOURCE = 0x1000000,
+    RESOURCE_STATE_GENERIC_READ = (((((0x1 | 0x2) | 0x40) | 0x80) | 0x200) | 0x800),
+    RESOURCE_STATE_PRESENT = 0,
+    RESOURCE_STATE_PREDICATION = 0x200,
+    RESOURCE_STATE_VIDEO_DECODE_READ = 0x10000,
+    RESOURCE_STATE_VIDEO_DECODE_WRITE = 0x20000,
+    RESOURCE_STATE_VIDEO_PROCESS_READ = 0x40000,
+    RESOURCE_STATE_VIDEO_PROCESS_WRITE = 0x80000,
+    RESOURCE_STATE_VIDEO_ENCODE_READ = 0x200000,
+    RESOURCE_STATE_VIDEO_ENCODE_WRITE = 0x800000
+} 	ResourceState;
 
 typedef
 enum CullMode : UINT8
@@ -9,6 +59,18 @@ enum CullMode : UINT8
     CULL_FRONT,
     CULL_BACK
 }   CullMode;
+
+typedef
+enum TextureType
+{
+    TEX_1D,
+    TEX_1D_ARRAY,
+    TEX_2D,
+    TEX_2D_ARRAY,
+    TEX_CUBE,
+    TEX_CUBE_ARRAY,
+    TEX_3D,
+}   TextureType;
 
 typedef
 enum ComparisonFunc
@@ -58,11 +120,11 @@ enum BlendOperator
 typedef
 enum PrimitiveTopologyType
 {
-    PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED = 0,
-    PRIMITIVE_TOPOLOGY_TYPE_POINT,
+    PRIMITIVE_TOPOLOGY_TYPE_POINT = 0,
     PRIMITIVE_TOPOLOGY_TYPE_LINE,
+    PRIMITIVE_TOPOLOGY_TYPE_LINESTRIP,
     PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-    PRIMITIVE_TOPOLOGY_TYPE_PATCH
+    PRIMITIVE_TOPOLOGY_TYPE_TRIANGLELIST
 } 	PrimitiveTopologyType;
 
 typedef
@@ -86,11 +148,11 @@ enum AttributeFormat
    
 } AttributeFormat;
 
-struct AttributeDesc
+struct SAttributeDesc
 {
+    const char* name;
     UINT stream;
     AttributeFormat format;
-    const char* name;
 };
 
 typedef
@@ -102,12 +164,59 @@ enum HeapType
 	HEAP_TYPE_CUSTOM
 } 	HeapType;
 
-
-
-struct Blob
+typedef
+enum ShaderType
 {
-    Blob() = default;
-    Blob(const void* address, size_t size) :
+    SHADER_TYPE_VERTEX_SHADER = 0,
+    SHADER_TYPE_PIXEL_SHADER = 1,
+    SHADER_TYPE_HULL_SHADER = 2,
+    SHADER_TYPE_GEOMETRY_SHADER = 3,
+    SHADER_TYPE_DOMAIN_SHADER = 4,
+    SHADER_TYPE_COMPUTE_SHADER = 5,
+}   ShaderType;
+
+typedef
+enum RenderPassFlags
+{
+    CLEAR_COLOR = 0x1,
+    CLEAR_DEPTH = 0x2,
+    FINAL_PRESENT = 0x4,
+}    RenderPassFlags;
+
+typedef
+enum CompileFlags {
+    COMPILE_DEBUG = (1 << 0),
+    COMPILE_SKIP_VALIDATION = (1 << 1),
+    COMPILE_SKIP_OPTIMIZATION = (1 << 2),
+    COMPILE_PACK_MATRIX_ROW_MAJOR = (1 << 3),
+    COMPILE_PACK_MATRIX_COLUMN_MAJOR = (1 << 4),
+    COMPILE_PARTIAL_PRECISION = (1 << 5),
+    COMPILE_FORCE_VS_SOFTWARE_NO_OPT = (1 << 6),
+    COMPILE_FORCE_PS_SOFTWARE_NO_OPT = (1 << 7),
+    COMPILE_NO_PRESHADER = (1 << 8),
+    COMPILE_AVOID_FLOW_CONTROL = (1 << 9),
+    COMPILE_PREFER_FLOW_CONTROL = (1 << 10),
+    COMPILE_ENABLE_STRICTNESS = (1 << 11),
+    COMPILE_ENABLE_BACKWARDS_COMPATIBILITY = (1 << 12),
+    COMPILE_IEEE_STRICTNESS = (1 << 13),
+    COMPILE_OPTIMIZATION_LEVEL0 = (1 << 14),
+    COMPILE_OPTIMIZATION_LEVEL1 = 0,
+    COMPILE_OPTIMIZATION_LEVEL2 = ((1 << 14) | (1 << 15)),
+    COMPILE_OPTIMIZATION_LEVEL3 = (1 << 15),
+    COMPILE_RESERVED16 = (1 << 16),
+    COMPILE_RESERVED17 = (1 << 17),
+    COMPILE_WARNINGS_ARE_ERRORS = (1 << 18),
+    COMPILE_RESOURCES_MAY_ALIAS = (1 << 19),
+    COMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES = (1 << 20),
+    COMPILE_ALL_RESOURCES_BOUND = (1 << 21),
+    COMPILE_DEBUG_NAME_FOR_SOURCE = (1 << 22),
+    COMPILE_DEBUG_NAME_FOR_BINARY = (1 << 23),
+}   CompileFlags;
+
+struct SBlob
+{
+    SBlob() = default;
+    SBlob(const void* address, size_t size) :
         address(address),
         size(size)
     {}
@@ -117,20 +226,36 @@ struct Blob
     size_t size;
 };
 
+struct SubresourceParams
+{
+    const void* pData;
+    UINT64 rowPitch;
+    UINT64 slicePitch;
+};
+
+struct DeviceParams
+{
+    bool useWarpDevice;
+    UINT width;
+    UINT height;
+};
+
 struct PipelineParams
 {
-    ComPtr<RootSignature> rootSignature;
-    Blob vs{ nullptr, 0 };
-    Blob gs{ nullptr, 0 };
-    Blob ps{ nullptr, 0 };
+    RootSignature rootSignature;
+    SBlob vs{ nullptr, 0 };
+    SBlob gs{ nullptr, 0 };
+    SBlob ps{ nullptr, 0 };
 
    
     PrimitiveTopologyType primitiveTopologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-    const AttributeDesc* attributes = nullptr;
+    const SAttributeDesc* attributes = nullptr;
     UINT attributeCount = 0;
 
-    BlendState blendState;
+    RenderPass renderPass;
+
+    BlendState blendState = nullptr;
     CullMode cullMode = CULL_NONE;
 
     bool depthTest = false;
@@ -138,27 +263,62 @@ struct PipelineParams
     ComparisonFunc depthFunc = COMPARISON_FUNC_GREATER;
 };
 
-
-class Renderer
+struct BufferParams
 {
-public:
-	Renderer(UINT width, UINT height, std::wstring name);
-	virtual ~Renderer();
-
-	float GetWidth() { return m_width; }
-	float GetHeight() { return m_height; }
-	const WCHAR* GetTitle() const { return m_title.c_str(); }
-
-	virtual void OnInit() = 0;
-	virtual void OnUpdate() = 0;
-	virtual void OnRender() = 0;
-	virtual void OnDestroy() = 0;
-
-	virtual void OnKeyDown(UINT8) {}
-	virtual void OnKeyUp(UINT8) {}
-
-protected:
-	bool m_useWarpDevice;
-	float m_width, m_height;
-	std::wstring m_title;
+    BufferParams(UINT size, HeapType heapType, ResourceState resourceState)
+        : size(size)
+        , heapType(heapType)
+        , resourceState(resourceState)
+    {
+    }
+    BufferParams(UINT elementSize, UINT elementCount, HeapType heapType, ResourceState resourceState)
+        : size(elementSize* elementCount)
+        , heapType(heapType)
+        , resourceState(resourceState)
+    {
+    }
+    UINT size;
+    HeapType heapType;
+    ResourceState resourceState;
 };
+
+inline ResourceState operator | (ResourceState a, ResourceState b) {
+    return ResourceState
+    (int(a) | int(b));
+}
+
+Device CreateDevice(DeviceParams& params, HWND hwnd);
+RenderSetup CreateRenderSetup(Device device);
+RootSignature CreateRootSignature(SDevice* device);
+Blob CreateShaderFromFile(ShaderType shaderType, LPCWSTR filePath, std::string entryPoint, UINT flags);
+RenderPass CreateRenderPass(Device device, ImageFormat colorFormat, ImageFormat depthFormat, RenderPassFlags flags, UINT msaaSampler = 1);
+Pipeline CreateGraphicsPipeline(SDevice* device, PipelineParams& params);
+Buffer CreateBuffer(Device device, const BufferParams& params);
+VertexSetup CreateVertexSetup(SBuffer* vertexBuffer, UINT vertexBufferStride, SBuffer* indexBuffer, UINT indexBufferStride);
+
+BlendState CreateBlendState(Blend src, Blend dst, BlendOperator mode, UINT mask, bool alphaToCoverageEnable);
+
+void WaitForGPU(SDevice* device);
+void MoveToNextFrame(SDevice* device);
+
+
+void Subresource(SDevice* device, SBuffer* destinationResource, SBuffer* intermediate, SubresourceParams& data);
+
+void Reset(SDevice* device, SPipeline* pipeline);
+
+void BeginRenderPass(SDevice* device, const DeviceParams& params, const float* clearColor = nullptr);
+void SetPipeline(SDevice* device, SPipeline* pipeline);
+void SetGraphicsRootSignature(SDevice* device, SRootSignature* rootSignature);
+void SetVertexSetup(SDevice* device, SVertexSetup* vertexSetup);
+
+void Draw(SDevice* device, UINT start, UINT count);
+void DrawIndexed(SDevice* device, UINT start, UINT count);
+void DrawIndexInstanced(SDevice* device, UINT start, UINT count, UINT startInstance, UINT instanceCount);
+void EndRenderPass(SDevice* device);
+
+void ExecuteCommand(SDevice* device);
+void Present(SDevice* device);
+Context GetContext(SDevice* device);
+RenderPass GetRenderPass(SDevice* device);
+
+void Destory(SDevice* device);

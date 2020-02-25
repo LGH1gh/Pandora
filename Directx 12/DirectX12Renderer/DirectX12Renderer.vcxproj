@@ -139,6 +139,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BaseApp.h" />
+    <ClInclude Include="d3dx12.h" />
+    <ClInclude Include="ImageTools.h" />
+    <ClInclude Include="Vector.h" />
+    <ClInclude Include="Renderer.h" />
+    <ClInclude Include="RendererHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BaseApp.cpp" />
+    <ClCompile Include="DirectX12Renderer.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Primitives.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
