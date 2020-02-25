@@ -41,9 +41,10 @@ void BaseApp::OnInit()
 
     Vertex triangleVertices[] = 
     {
-        { { 0.0f, 0.25f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-        { { 0.25f, -0.25f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-        { { -0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+        { { 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+        { { 0.0f, -0.25f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+        { { -0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+        { { -0.25f, 0.0f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } }
     };
     const UINT vertexBufferSize = sizeof(triangleVertices);
 
@@ -51,10 +52,26 @@ void BaseApp::OnInit()
     Buffer vertexBuffer = CreateBuffer(m_device, vertexBufferParams);
     BufferParams vertexUploadBufferParams(vertexBufferSize, HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ);
     Buffer vertexUploadBuffer = CreateBuffer(m_device, vertexUploadBufferParams);
-    SubresourceParams data = { triangleVertices, vertexBufferSize, vertexBufferSize };
-    Subresource(m_device, vertexBuffer, vertexUploadBuffer, data);
+    SubresourceParams vertexData = { triangleVertices, vertexBufferSize, vertexBufferSize };
+    Subresource(m_device, vertexBuffer, vertexUploadBuffer, vertexData);
+
+
+    unsigned long indices[] =
+    {
+        0, 1, 2,
+        0, 2, 3
+    };
+    const UINT indexBufferSize = sizeof(indices);
+
+    BufferParams indexBufferParams(indexBufferSize, HEAP_TYPE_DEFAULT, RESOURCE_STATE_COPY_DEST);
+    Buffer indexBuffer = CreateBuffer(m_device, indexBufferParams);
+    BufferParams indexUploadBufferParams(indexBufferSize, HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ);
+    Buffer indexUploadBuffer = CreateBuffer(m_device, indexUploadBufferParams);
+    SubresourceParams indexData = { indices, indexBufferSize, indexBufferSize };
+    Subresource(m_device, indexBuffer, indexUploadBuffer, indexData);
+
     ExecuteCommand(m_device);
-    m_vertexSetup = CreateVertexSetup(vertexBuffer, sizeof(Vertex), nullptr, 0);
+    m_vertexSetup = CreateVertexSetup(vertexBuffer, sizeof(Vertex), indexBuffer, sizeof(unsigned long));
 
 
     
@@ -91,7 +108,7 @@ void BaseApp::PopulateCommand()
         SetPipeline(m_device, m_pipeline);
         SetGraphicsRootSignature(m_device, m_rootSignature);
         SetVertexSetup(m_device, m_vertexSetup);
-        Draw(m_device, 0, 3);
+        DrawIndexed(m_device, 0, 6);
     }
     EndRenderPass(m_device);
 
