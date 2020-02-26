@@ -17,34 +17,45 @@ void BaseApp::OnInit()
 
     UINT compileFlags = COMPILE_DEBUG | COMPILE_SKIP_OPTIMIZATION;
     Blob vertexShader = CreateShaderFromFile(SHADER_TYPE_VERTEX_SHADER, L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\Shader.hlsl", "VSMain", compileFlags);
-    Blob pixelShader = CreateShaderFromFile(SHADER_TYPE_PIXEL_SHADER, L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\Shader.hlsl", "PSMain", compileFlags);
-
+    Blob pixelShader1 = CreateShaderFromFile(SHADER_TYPE_PIXEL_SHADER, L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\Shader.hlsl", "PSMain1", compileFlags);
+    Blob pixelShader2 = CreateShaderFromFile(SHADER_TYPE_PIXEL_SHADER, L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\Shader.hlsl", "PSMain2", compileFlags);
+    
     SAttributeDesc inputElementDesc[] =
     {
         { "POSITION", 0, ATTRIBUTE_FORMAT_FLOAT3_32 },
         { "COLOR", 0, ATTRIBUTE_FORMAT_FLOAT4_32 },
     };
 
-    RenderPass renderPass = CreateRenderPass(m_device, IMAGE_FORMAT_R8G8B8A8_UNORM, IMAGE_FORMAT_R8G8B8A8_UNORM, CLEAR_COLOR);
+    //RenderPass renderPass = CreateRenderPass(m_device, IMAGE_FORMAT_R8G8B8A8_UNORM, IMAGE_FORMAT_R8G8B8A8_UNORM, CLEAR_COLOR);
 
     PipelineParams pipelineParams;
     pipelineParams.attributeCount = 2;
     pipelineParams.attributes = inputElementDesc;
     pipelineParams.rootSignature = m_rootSignature;
     pipelineParams.vs = { vertexShader->address, vertexShader->size };
-    pipelineParams.ps = { pixelShader->address, pixelShader->size };
+    pipelineParams.ps = { pixelShader1->address, pixelShader1->size };
     pipelineParams.cullMode = CULL_NONE;
     pipelineParams.renderPass = GetRenderPass(m_device);
-    
-    m_pipeline = CreateGraphicsPipeline(m_device, pipelineParams);
+    m_pipeline1 = CreateGraphicsPipeline(m_device, pipelineParams);
 
+    pipelineParams.ps = { pixelShader2->address, pixelShader2->size };
+    m_pipeline2 = CreateGraphicsPipeline(m_device, pipelineParams);
 
     Vertex triangleVertices[] = 
     {
         { { 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
         { { 0.0f, -0.25f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
         { { -0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-        { { -0.25f, 0.0f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } }
+        { { -0.25f, 0.0f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        
+        { { 0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        { { 0.5f, 0.75f, 0.0f }, { 0.0f, 1.0f, 1.0f, 1.0f } },
+        { { 0.75f, 0.5f, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f } },
+
+        { { -0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        { { -0.5f, -0.75f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        { { -0.75f, -0.75f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        { { -0.75f, -0.5f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } }
     };
     const UINT vertexBufferSize = sizeof(triangleVertices);
 
@@ -59,7 +70,12 @@ void BaseApp::OnInit()
     unsigned long indices[] =
     {
         0, 1, 2,
-        0, 2, 3
+        0, 2, 3,
+
+        4, 5, 6,
+
+        7, 8, 9,
+        7, 9, 10
     };
     const UINT indexBufferSize = sizeof(indices);
 
@@ -100,15 +116,18 @@ void BaseApp::OnRender()
 
 void BaseApp::PopulateCommand()
 {
-    Reset(m_device, m_pipeline);
+    Reset(m_device, m_pipeline1);
 
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     BeginRenderPass(m_device, m_deviceParams, clearColor);
     {
-        SetPipeline(m_device, m_pipeline);
         SetGraphicsRootSignature(m_device, m_rootSignature);
         SetVertexSetup(m_device, m_vertexSetup);
+        SetPipeline(m_device, m_pipeline1);
         DrawIndexed(m_device, 0, 6);
+        DrawIndexed(m_device, 6, 3);
+        SetPipeline(m_device, m_pipeline2);
+        DrawIndexed(m_device, 9, 6);
     }
     EndRenderPass(m_device);
 

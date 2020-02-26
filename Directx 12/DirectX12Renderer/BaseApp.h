@@ -36,7 +36,8 @@ protected:
 	Device m_device;
 	DeviceParams m_deviceParams;
 	RootSignature m_rootSignature;
-	Pipeline m_pipeline;
+	Pipeline m_pipeline1;
+	Pipeline m_pipeline2;
 	VertexSetup m_vertexSetup;
 
 	BlendState m_blendState;

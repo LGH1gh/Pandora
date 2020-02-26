@@ -1,10 +1,11 @@
 #pragma once
 #include "Renderer.h"
 
+#include <wrl/client.h>
 #include <DirectXMath.h>
 
 #include <d3d12.h>
-#include "d3dx12.h"
+//#include "d3dx12.h"
 
 #include <dxgi1_4.h>
 #include <d3dcompiler.h>
@@ -16,6 +17,219 @@
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
+
+struct CD3DX12_TEXTURE_COPY_LOCATION : public D3D12_TEXTURE_COPY_LOCATION
+{
+	CD3DX12_TEXTURE_COPY_LOCATION() = default;
+	explicit CD3DX12_TEXTURE_COPY_LOCATION(const D3D12_TEXTURE_COPY_LOCATION& o) :
+		D3D12_TEXTURE_COPY_LOCATION(o)
+	{}
+	CD3DX12_TEXTURE_COPY_LOCATION(_In_ ID3D12Resource* pRes)
+	{
+		pResource = pRes;
+		Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		PlacedFootprint = {};
+	}
+	CD3DX12_TEXTURE_COPY_LOCATION(_In_ ID3D12Resource* pRes, D3D12_PLACED_SUBRESOURCE_FOOTPRINT const& Footprint)
+	{
+		pResource = pRes;
+		Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		PlacedFootprint = Footprint;
+	}
+	CD3DX12_TEXTURE_COPY_LOCATION(_In_ ID3D12Resource* pRes, UINT Sub)
+	{
+		pResource = pRes;
+		Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		PlacedFootprint = {};
+		SubresourceIndex = Sub;
+	}
+};
+
+struct CD3DX12_RESOURCE_BARRIER : public D3D12_RESOURCE_BARRIER
+{
+    CD3DX12_RESOURCE_BARRIER() = default;
+    explicit CD3DX12_RESOURCE_BARRIER(const D3D12_RESOURCE_BARRIER &o) :
+        D3D12_RESOURCE_BARRIER(o)
+    {}
+    static inline CD3DX12_RESOURCE_BARRIER Transition(
+        _In_ ID3D12Resource* pResource,
+        D3D12_RESOURCE_STATES stateBefore,
+        D3D12_RESOURCE_STATES stateAfter,
+        UINT subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+        D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
+    {
+        CD3DX12_RESOURCE_BARRIER result = {};
+        D3D12_RESOURCE_BARRIER &barrier = result;
+        result.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        result.Flags = flags;
+        barrier.Transition.pResource = pResource;
+        barrier.Transition.StateBefore = stateBefore;
+        barrier.Transition.StateAfter = stateAfter;
+        barrier.Transition.Subresource = subresource;
+        return result;
+    }
+    static inline CD3DX12_RESOURCE_BARRIER Aliasing(
+        _In_ ID3D12Resource* pResourceBefore,
+        _In_ ID3D12Resource* pResourceAfter)
+    {
+        CD3DX12_RESOURCE_BARRIER result = {};
+        D3D12_RESOURCE_BARRIER &barrier = result;
+        result.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
+        barrier.Aliasing.pResourceBefore = pResourceBefore;
+        barrier.Aliasing.pResourceAfter = pResourceAfter;
+        return result;
+    }
+    static inline CD3DX12_RESOURCE_BARRIER UAV(
+        _In_ ID3D12Resource* pResource)
+    {
+        CD3DX12_RESOURCE_BARRIER result = {};
+        D3D12_RESOURCE_BARRIER &barrier = result;
+        result.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        barrier.UAV.pResource = pResource;
+        return result;
+    }
+};
+
+inline void MemcpySubresource(
+	_In_ const D3D12_MEMCPY_DEST* pDest,
+	_In_ const D3D12_SUBRESOURCE_DATA* pSrc,
+	SIZE_T RowSizeInBytes,
+	UINT NumRows,
+	UINT NumSlices)
+{
+	for (UINT z = 0; z < NumSlices; ++z)
+	{
+		auto pDestSlice = reinterpret_cast<BYTE*>(pDest->pData) + pDest->SlicePitch * z;
+		auto pSrcSlice = reinterpret_cast<const BYTE*>(pSrc->pData) + pSrc->SlicePitch * LONG_PTR(z);
+		for (UINT y = 0; y < NumRows; ++y)
+		{
+			memcpy(pDestSlice + pDest->RowPitch * y,
+				pSrcSlice + pSrc->RowPitch * LONG_PTR(y),
+				RowSizeInBytes);
+		}
+	}
+}
+
+//------------------------------------------------------------------------------------------------
+// All arrays must be populated (e.g. by calling GetCopyableFootprints)
+inline UINT64 UpdateSubresources(
+	_In_ ID3D12GraphicsCommandList* pCmdList,
+	_In_ ID3D12Resource* pDestinationResource,
+	_In_ ID3D12Resource* pIntermediate,
+	_In_range_(0, D3D12_REQ_SUBRESOURCES) UINT FirstSubresource,
+	_In_range_(0, D3D12_REQ_SUBRESOURCES - FirstSubresource) UINT NumSubresources,
+	UINT64 RequiredSize,
+	_In_reads_(NumSubresources) const D3D12_PLACED_SUBRESOURCE_FOOTPRINT* pLayouts,
+	_In_reads_(NumSubresources) const UINT* pNumRows,
+	_In_reads_(NumSubresources) const UINT64* pRowSizesInBytes,
+	_In_reads_(NumSubresources) const D3D12_SUBRESOURCE_DATA* pSrcData)
+{
+	// Minor validation
+	auto IntermediateDesc = pIntermediate->GetDesc();
+	auto DestinationDesc = pDestinationResource->GetDesc();
+	if (IntermediateDesc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER ||
+		IntermediateDesc.Width < RequiredSize + pLayouts[0].Offset ||
+		RequiredSize > SIZE_T(-1) ||
+		(DestinationDesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER &&
+		(FirstSubresource != 0 || NumSubresources != 1)))
+	{
+		return 0;
+	}
+
+	BYTE* pData;
+	HRESULT hr = pIntermediate->Map(0, nullptr, reinterpret_cast<void**>(&pData));
+	if (FAILED(hr))
+	{
+		return 0;
+	}
+
+	for (UINT i = 0; i < NumSubresources; ++i)
+	{
+		if (pRowSizesInBytes[i] > SIZE_T(-1)) return 0;
+		D3D12_MEMCPY_DEST DestData = { pData + pLayouts[i].Offset, pLayouts[i].Footprint.RowPitch, SIZE_T(pLayouts[i].Footprint.RowPitch) * SIZE_T(pNumRows[i]) };
+		MemcpySubresource(&DestData, &pSrcData[i], static_cast<SIZE_T>(pRowSizesInBytes[i]), pNumRows[i], pLayouts[i].Footprint.Depth);
+	}
+	pIntermediate->Unmap(0, nullptr);
+
+	if (DestinationDesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+	{
+		pCmdList->CopyBufferRegion(
+			pDestinationResource, 0, pIntermediate, pLayouts[0].Offset, pLayouts[0].Footprint.Width);
+	}
+	else
+	{
+		for (UINT i = 0; i < NumSubresources; ++i)
+		{
+			CD3DX12_TEXTURE_COPY_LOCATION Dst(pDestinationResource, i + FirstSubresource);
+			CD3DX12_TEXTURE_COPY_LOCATION Src(pIntermediate, pLayouts[i]);
+			pCmdList->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+		}
+	}
+	return RequiredSize;
+}
+
+//------------------------------------------------------------------------------------------------
+// Heap-allocating UpdateSubresources implementation
+inline UINT64 UpdateSubresources(
+	_In_ ID3D12GraphicsCommandList* pCmdList,
+	_In_ ID3D12Resource* pDestinationResource,
+	_In_ ID3D12Resource* pIntermediate,
+	UINT64 IntermediateOffset,
+	_In_range_(0, D3D12_REQ_SUBRESOURCES) UINT FirstSubresource,
+	_In_range_(0, D3D12_REQ_SUBRESOURCES - FirstSubresource) UINT NumSubresources,
+	_In_reads_(NumSubresources) D3D12_SUBRESOURCE_DATA* pSrcData)
+{
+	UINT64 RequiredSize = 0;
+	UINT64 MemToAlloc = static_cast<UINT64>(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(UINT) + sizeof(UINT64))* NumSubresources;
+	if (MemToAlloc > SIZE_MAX)
+	{
+		return 0;
+	}
+	void* pMem = HeapAlloc(GetProcessHeap(), 0, static_cast<SIZE_T>(MemToAlloc));
+	if (pMem == nullptr)
+	{
+		return 0;
+	}
+	auto pLayouts = reinterpret_cast<D3D12_PLACED_SUBRESOURCE_FOOTPRINT*>(pMem);
+	UINT64* pRowSizesInBytes = reinterpret_cast<UINT64*>(pLayouts + NumSubresources);
+	UINT* pNumRows = reinterpret_cast<UINT*>(pRowSizesInBytes + NumSubresources);
+
+	auto Desc = pDestinationResource->GetDesc();
+	ID3D12Device* pDevice = nullptr;
+	pDestinationResource->GetDevice(IID_ID3D12Device, reinterpret_cast<void**>(&pDevice));
+	pDevice->GetCopyableFootprints(&Desc, FirstSubresource, NumSubresources, IntermediateOffset, pLayouts, pNumRows, pRowSizesInBytes, &RequiredSize);
+	pDevice->Release();
+
+	UINT64 Result = UpdateSubresources(pCmdList, pDestinationResource, pIntermediate, FirstSubresource, NumSubresources, RequiredSize, pLayouts, pNumRows, pRowSizesInBytes, pSrcData);
+	HeapFree(GetProcessHeap(), 0, pMem);
+	return Result;
+}
+
+//------------------------------------------------------------------------------------------------
+// Stack-allocating UpdateSubresources implementation
+template <UINT MaxSubresources>
+inline UINT64 UpdateSubresources(
+	_In_ ID3D12GraphicsCommandList* pCmdList,
+	_In_ ID3D12Resource* pDestinationResource,
+	_In_ ID3D12Resource* pIntermediate,
+	UINT64 IntermediateOffset,
+	_In_range_(0, MaxSubresources) UINT FirstSubresource,
+	_In_range_(1, MaxSubresources - FirstSubresource) UINT NumSubresources,
+	_In_reads_(NumSubresources) D3D12_SUBRESOURCE_DATA* pSrcData)
+{
+	UINT64 RequiredSize = 0;
+	D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts[MaxSubresources];
+	UINT NumRows[MaxSubresources];
+	UINT64 RowSizesInBytes[MaxSubresources];
+
+	auto Desc = pDestinationResource->GetDesc();
+	ID3D12Device* pDevice = nullptr;
+	pDestinationResource->GetDevice(IID_ID3D12Device, reinterpret_cast<void**>(&pDevice));
+	pDevice->GetCopyableFootprints(&Desc, FirstSubresource, NumSubresources, IntermediateOffset, Layouts, NumRows, RowSizesInBytes, &RequiredSize);
+	pDevice->Release();
+
+	return UpdateSubresources(pCmdList, pDestinationResource, pIntermediate, FirstSubresource, NumSubresources, RequiredSize, Layouts, NumRows, RowSizesInBytes, pSrcData);
+}
 
 static const DXGI_FORMAT FORMATS[] =
 {
@@ -332,12 +546,15 @@ Device CreateDevice(DeviceParams& params, HWND hwnd)
 	//device->samplerHeap->Init(device->device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16, true);
 
 
-	device->backBufferRenderPass = CreateRenderPass(device, IMAGE_FORMAT_R8G8B8A8_UNORM, IMAGE_FORMAT_UNKNOWN, FINAL_PRESENT);
-	device->backBufferRenderSetup = CreateRenderSetup(device);
+
 	for (UINT n = 0; n < FrameCount; n++)
 	{
 		device->commandAllocators[n]->Init(device->device.Get());
 	}
+
+	ThrowIfFailed(device->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, device->commandAllocators[device->frameIndex]->commandAllocator.Get(), nullptr, IID_PPV_ARGS(&device->mainContext->commandList)));
+	device->backBufferRenderPass = CreateRenderPass(device, IMAGE_FORMAT_R8G8B8A8_UNORM, IMAGE_FORMAT_UNKNOWN, FINAL_PRESENT);
+	device->backBufferRenderSetup = CreateRenderSetup(device);
 
 	{
 		ThrowIfFailed(device->device->CreateFence(device->fenceValues[device->frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&device->fence)));
@@ -416,8 +633,8 @@ RootSignature CreateRootSignature(SDevice* device)
 {
 	RootSignature rootSignature = new SRootSignature();
 
-	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-	rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	rootSignatureDesc = { 0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT };
 
 	ComPtr<ID3DBlob> signature;
 	ComPtr<ID3DBlob> error;
@@ -551,7 +768,6 @@ Pipeline CreateGraphicsPipeline(SDevice* device, PipelineParams& params)
 	pipeline->primitiveTopology = (D3D12_PRIMITIVE_TOPOLOGY)(params.primitiveTopologyType + 1);
 
 	ThrowIfFailed(device->device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipeline->pipeline)));
-	ThrowIfFailed(device->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, device->commandAllocators[device->frameIndex]->commandAllocator.Get(), pipeline->pipeline.Get(), IID_PPV_ARGS(&device->mainContext->commandList)));
 	
 	return pipeline;
 }
@@ -640,7 +856,6 @@ void MoveToNextFrame(SDevice* device)
 
 void Subresource(SDevice* device, SBuffer* destinationResource, SBuffer* intermediate, SubresourceParams& params)
 {
-
 	D3D12_SUBRESOURCE_DATA data;
 	data.pData = params.pData;
 	data.RowPitch = params.rowPitch;
@@ -655,25 +870,17 @@ void Reset(SDevice* device, SPipeline* pipeline)
 	ThrowIfFailed(device->mainContext->commandList->Reset(device->commandAllocators[device->frameIndex]->commandAllocator.Get(), pipeline->pipeline.Get()));
 }
 
-
 void BeginRenderPass(SDevice* device, const DeviceParams& params, const float* clearColor)
 {
 	D3D12_VIEWPORT vp = { 0.0f, 0.0f, static_cast<float>(params.width), static_cast<float>(params.height) };
-	D3D12_RECT sr = { 0, 0, static_cast<float>(params.width), static_cast<float>(params.height) };
+	D3D12_RECT sr = { 0, 0, static_cast<LONG>(params.width), static_cast<LONG>(params.height) };
 	device->mainContext->commandList->RSSetViewports(1, &vp);
 	device->mainContext->commandList->RSSetScissorRects(1, &sr);
 	device->mainContext->commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(device->backBufferRenderSetup->renderTargets[device->frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(device->rtvHeap->GetCPUHandle(device->frameIndex));
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(device->rtvHeap->GetCPUHandle(device->frameIndex));
 	device->mainContext->commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 	device->mainContext->commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-}
-
-
-
-void ResetCommands(SDevice* device, SPipeline* pipeline)
-{
-	
 }
 
 void SetGraphicsRootSignature(SDevice* device, SRootSignature* rootSignature)
