@@ -2,7 +2,7 @@
 #include "Renderer.h"
 
 #include <wrl/client.h>
-#include <DirectXMath.h>
+
 
 #include <d3d12.h>
 //#include "d3dx12.h"
@@ -17,6 +17,24 @@
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
+
+struct CD3DX12_DEFAULT {};
+extern const DECLSPEC_SELECTANY CD3DX12_DEFAULT D3D12_DEFAULT;
+
+struct CD3DX12_RANGE : public D3D12_RANGE
+{
+	CD3DX12_RANGE() = default;
+	explicit CD3DX12_RANGE(const D3D12_RANGE& o) :
+		D3D12_RANGE(o)
+	{}
+	CD3DX12_RANGE(
+		SIZE_T begin,
+		SIZE_T end)
+	{
+		Begin = begin;
+		End = end;
+	}
+};
 
 struct CD3DX12_TEXTURE_COPY_LOCATION : public D3D12_TEXTURE_COPY_LOCATION
 {
@@ -89,6 +107,403 @@ struct CD3DX12_RESOURCE_BARRIER : public D3D12_RESOURCE_BARRIER
         return result;
     }
 };
+
+struct CD3DX12_ROOT_SIGNATURE_DESC : public D3D12_ROOT_SIGNATURE_DESC
+{
+	CD3DX12_ROOT_SIGNATURE_DESC() = default;
+	explicit CD3DX12_ROOT_SIGNATURE_DESC(const D3D12_ROOT_SIGNATURE_DESC& o) :
+		D3D12_ROOT_SIGNATURE_DESC(o)
+	{}
+	CD3DX12_ROOT_SIGNATURE_DESC(
+		UINT numParameters,
+		_In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER* _pParameters,
+		UINT numStaticSamplers = 0,
+		_In_reads_opt_(numStaticSamplers) const D3D12_STATIC_SAMPLER_DESC* _pStaticSamplers = nullptr,
+		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_NONE)
+	{
+		Init(numParameters, _pParameters, numStaticSamplers, _pStaticSamplers, flags);
+	}
+	CD3DX12_ROOT_SIGNATURE_DESC(CD3DX12_DEFAULT)
+	{
+		Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+	}
+
+	inline void Init(
+		UINT numParameters,
+		_In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER* _pParameters,
+		UINT numStaticSamplers = 0,
+		_In_reads_opt_(numStaticSamplers) const D3D12_STATIC_SAMPLER_DESC* _pStaticSamplers = nullptr,
+		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_NONE)
+	{
+		Init(*this, numParameters, _pParameters, numStaticSamplers, _pStaticSamplers, flags);
+	}
+
+	static inline void Init(
+		_Out_ D3D12_ROOT_SIGNATURE_DESC& desc,
+		UINT numParameters,
+		_In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER* _pParameters,
+		UINT numStaticSamplers = 0,
+		_In_reads_opt_(numStaticSamplers) const D3D12_STATIC_SAMPLER_DESC* _pStaticSamplers = nullptr,
+		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_NONE)
+	{
+		desc.NumParameters = numParameters;
+		desc.pParameters = _pParameters;
+		desc.NumStaticSamplers = numStaticSamplers;
+		desc.pStaticSamplers = _pStaticSamplers;
+		desc.Flags = flags;
+	}
+};
+
+struct CD3DX12_DESCRIPTOR_RANGE1 : public D3D12_DESCRIPTOR_RANGE1
+{
+	CD3DX12_DESCRIPTOR_RANGE1() = default;
+	explicit CD3DX12_DESCRIPTOR_RANGE1(const D3D12_DESCRIPTOR_RANGE1& o) :
+		D3D12_DESCRIPTOR_RANGE1(o)
+	{}
+	CD3DX12_DESCRIPTOR_RANGE1(
+		D3D12_DESCRIPTOR_RANGE_TYPE rangeType,
+		UINT numDescriptors,
+		UINT baseShaderRegister,
+		UINT registerSpace = 0,
+		D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE,
+		UINT offsetInDescriptorsFromTableStart =
+		D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
+	{
+		Init(rangeType, numDescriptors, baseShaderRegister, registerSpace, flags, offsetInDescriptorsFromTableStart);
+	}
+
+	inline void Init(
+		D3D12_DESCRIPTOR_RANGE_TYPE rangeType,
+		UINT numDescriptors,
+		UINT baseShaderRegister,
+		UINT registerSpace = 0,
+		D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE,
+		UINT offsetInDescriptorsFromTableStart =
+		D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
+	{
+		Init(*this, rangeType, numDescriptors, baseShaderRegister, registerSpace, flags, offsetInDescriptorsFromTableStart);
+	}
+
+	static inline void Init(
+		_Out_ D3D12_DESCRIPTOR_RANGE1& range,
+		D3D12_DESCRIPTOR_RANGE_TYPE rangeType,
+		UINT numDescriptors,
+		UINT baseShaderRegister,
+		UINT registerSpace = 0,
+		D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE,
+		UINT offsetInDescriptorsFromTableStart =
+		D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
+	{
+		range.RangeType = rangeType;
+		range.NumDescriptors = numDescriptors;
+		range.BaseShaderRegister = baseShaderRegister;
+		range.RegisterSpace = registerSpace;
+		range.Flags = flags;
+		range.OffsetInDescriptorsFromTableStart = offsetInDescriptorsFromTableStart;
+	}
+};
+
+struct CD3DX12_ROOT_CONSTANTS : public D3D12_ROOT_CONSTANTS
+{
+	CD3DX12_ROOT_CONSTANTS() = default;
+	explicit CD3DX12_ROOT_CONSTANTS(const D3D12_ROOT_CONSTANTS& o) :
+		D3D12_ROOT_CONSTANTS(o)
+	{}
+	CD3DX12_ROOT_CONSTANTS(
+		UINT num32BitValues,
+		UINT shaderRegister,
+		UINT registerSpace = 0)
+	{
+		Init(num32BitValues, shaderRegister, registerSpace);
+	}
+
+	inline void Init(
+		UINT num32BitValues,
+		UINT shaderRegister,
+		UINT registerSpace = 0)
+	{
+		Init(*this, num32BitValues, shaderRegister, registerSpace);
+	}
+
+	static inline void Init(
+		_Out_ D3D12_ROOT_CONSTANTS& rootConstants,
+		UINT num32BitValues,
+		UINT shaderRegister,
+		UINT registerSpace = 0)
+	{
+		rootConstants.Num32BitValues = num32BitValues;
+		rootConstants.ShaderRegister = shaderRegister;
+		rootConstants.RegisterSpace = registerSpace;
+	}
+};
+
+struct CD3DX12_ROOT_DESCRIPTOR_TABLE1 : public D3D12_ROOT_DESCRIPTOR_TABLE1
+{
+	CD3DX12_ROOT_DESCRIPTOR_TABLE1() = default;
+	explicit CD3DX12_ROOT_DESCRIPTOR_TABLE1(const D3D12_ROOT_DESCRIPTOR_TABLE1& o) :
+		D3D12_ROOT_DESCRIPTOR_TABLE1(o)
+	{}
+	CD3DX12_ROOT_DESCRIPTOR_TABLE1(
+		UINT numDescriptorRanges,
+		_In_reads_opt_(numDescriptorRanges) const D3D12_DESCRIPTOR_RANGE1* _pDescriptorRanges)
+	{
+		Init(numDescriptorRanges, _pDescriptorRanges);
+	}
+
+	inline void Init(
+		UINT numDescriptorRanges,
+		_In_reads_opt_(numDescriptorRanges) const D3D12_DESCRIPTOR_RANGE1* _pDescriptorRanges)
+	{
+		Init(*this, numDescriptorRanges, _pDescriptorRanges);
+	}
+
+	static inline void Init(
+		_Out_ D3D12_ROOT_DESCRIPTOR_TABLE1& rootDescriptorTable,
+		UINT numDescriptorRanges,
+		_In_reads_opt_(numDescriptorRanges) const D3D12_DESCRIPTOR_RANGE1* _pDescriptorRanges)
+	{
+		rootDescriptorTable.NumDescriptorRanges = numDescriptorRanges;
+		rootDescriptorTable.pDescriptorRanges = _pDescriptorRanges;
+	}
+};
+
+struct CD3DX12_ROOT_DESCRIPTOR1 : public D3D12_ROOT_DESCRIPTOR1
+{
+	CD3DX12_ROOT_DESCRIPTOR1() = default;
+	explicit CD3DX12_ROOT_DESCRIPTOR1(const D3D12_ROOT_DESCRIPTOR1& o) :
+		D3D12_ROOT_DESCRIPTOR1(o)
+	{}
+	CD3DX12_ROOT_DESCRIPTOR1(
+		UINT shaderRegister,
+		UINT registerSpace = 0,
+		D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
+	{
+		Init(shaderRegister, registerSpace, flags);
+	}
+
+	inline void Init(
+		UINT shaderRegister,
+		UINT registerSpace = 0,
+		D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
+	{
+		Init(*this, shaderRegister, registerSpace, flags);
+	}
+
+	static inline void Init(
+		_Out_ D3D12_ROOT_DESCRIPTOR1& table,
+		UINT shaderRegister,
+		UINT registerSpace = 0,
+		D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
+	{
+		table.ShaderRegister = shaderRegister;
+		table.RegisterSpace = registerSpace;
+		table.Flags = flags;
+	}
+};
+
+struct CD3DX12_ROOT_PARAMETER1 : public D3D12_ROOT_PARAMETER1
+{
+	CD3DX12_ROOT_PARAMETER1() = default;
+	explicit CD3DX12_ROOT_PARAMETER1(const D3D12_ROOT_PARAMETER1& o) :
+		D3D12_ROOT_PARAMETER1(o)
+	{}
+
+	static inline void InitAsDescriptorTable(
+		_Out_ D3D12_ROOT_PARAMETER1& rootParam,
+		UINT numDescriptorRanges,
+		_In_reads_(numDescriptorRanges) const D3D12_DESCRIPTOR_RANGE1* pDescriptorRanges,
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+	{
+		rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		rootParam.ShaderVisibility = visibility;
+		CD3DX12_ROOT_DESCRIPTOR_TABLE1::Init(rootParam.DescriptorTable, numDescriptorRanges, pDescriptorRanges);
+	}
+
+	static inline void InitAsConstants(
+		_Out_ D3D12_ROOT_PARAMETER1& rootParam,
+		UINT num32BitValues,
+		UINT shaderRegister,
+		UINT registerSpace = 0,
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+	{
+		rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		rootParam.ShaderVisibility = visibility;
+		CD3DX12_ROOT_CONSTANTS::Init(rootParam.Constants, num32BitValues, shaderRegister, registerSpace);
+	}
+
+	static inline void InitAsConstantBufferView(
+		_Out_ D3D12_ROOT_PARAMETER1& rootParam,
+		UINT shaderRegister,
+		UINT registerSpace = 0,
+		D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+	{
+		rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		rootParam.ShaderVisibility = visibility;
+		CD3DX12_ROOT_DESCRIPTOR1::Init(rootParam.Descriptor, shaderRegister, registerSpace, flags);
+	}
+
+	static inline void InitAsShaderResourceView(
+		_Out_ D3D12_ROOT_PARAMETER1& rootParam,
+		UINT shaderRegister,
+		UINT registerSpace = 0,
+		D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+	{
+		rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+		rootParam.ShaderVisibility = visibility;
+		CD3DX12_ROOT_DESCRIPTOR1::Init(rootParam.Descriptor, shaderRegister, registerSpace, flags);
+	}
+
+	static inline void InitAsUnorderedAccessView(
+		_Out_ D3D12_ROOT_PARAMETER1& rootParam,
+		UINT shaderRegister,
+		UINT registerSpace = 0,
+		D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+	{
+		rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
+		rootParam.ShaderVisibility = visibility;
+		CD3DX12_ROOT_DESCRIPTOR1::Init(rootParam.Descriptor, shaderRegister, registerSpace, flags);
+	}
+
+	inline void InitAsDescriptorTable(
+		UINT numDescriptorRanges,
+		_In_reads_(numDescriptorRanges) const D3D12_DESCRIPTOR_RANGE1* pDescriptorRanges,
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+	{
+		InitAsDescriptorTable(*this, numDescriptorRanges, pDescriptorRanges, visibility);
+	}
+
+	inline void InitAsConstants(
+		UINT num32BitValues,
+		UINT shaderRegister,
+		UINT registerSpace = 0,
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+	{
+		InitAsConstants(*this, num32BitValues, shaderRegister, registerSpace, visibility);
+	}
+
+	inline void InitAsConstantBufferView(
+		UINT shaderRegister,
+		UINT registerSpace = 0,
+		D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+	{
+		InitAsConstantBufferView(*this, shaderRegister, registerSpace, flags, visibility);
+	}
+
+	inline void InitAsShaderResourceView(
+		UINT shaderRegister,
+		UINT registerSpace = 0,
+		D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+	{
+		InitAsShaderResourceView(*this, shaderRegister, registerSpace, flags, visibility);
+	}
+
+	inline void InitAsUnorderedAccessView(
+		UINT shaderRegister,
+		UINT registerSpace = 0,
+		D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+	{
+		InitAsUnorderedAccessView(*this, shaderRegister, registerSpace, flags, visibility);
+	}
+};
+
+struct CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC : public D3D12_VERSIONED_ROOT_SIGNATURE_DESC
+{
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC() = default;
+	explicit CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC(const D3D12_VERSIONED_ROOT_SIGNATURE_DESC& o) :
+		D3D12_VERSIONED_ROOT_SIGNATURE_DESC(o)
+	{}
+	explicit CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC(const D3D12_ROOT_SIGNATURE_DESC& o)
+	{
+		Version = D3D_ROOT_SIGNATURE_VERSION_1_0;
+		Desc_1_0 = o;
+	}
+	explicit CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC(const D3D12_ROOT_SIGNATURE_DESC1& o)
+	{
+		Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+		Desc_1_1 = o;
+	}
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC(
+		UINT numParameters,
+		_In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER* _pParameters,
+		UINT numStaticSamplers = 0,
+		_In_reads_opt_(numStaticSamplers) const D3D12_STATIC_SAMPLER_DESC* _pStaticSamplers = nullptr,
+		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_NONE)
+	{
+		Init_1_0(numParameters, _pParameters, numStaticSamplers, _pStaticSamplers, flags);
+	}
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC(
+		UINT numParameters,
+		_In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER1* _pParameters,
+		UINT numStaticSamplers = 0,
+		_In_reads_opt_(numStaticSamplers) const D3D12_STATIC_SAMPLER_DESC* _pStaticSamplers = nullptr,
+		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_NONE)
+	{
+		Init_1_1(numParameters, _pParameters, numStaticSamplers, _pStaticSamplers, flags);
+	}
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC(CD3DX12_DEFAULT)
+	{
+		Init_1_1(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+	}
+
+	inline void Init_1_0(
+		UINT numParameters,
+		_In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER* _pParameters,
+		UINT numStaticSamplers = 0,
+		_In_reads_opt_(numStaticSamplers) const D3D12_STATIC_SAMPLER_DESC* _pStaticSamplers = nullptr,
+		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_NONE)
+	{
+		Init_1_0(*this, numParameters, _pParameters, numStaticSamplers, _pStaticSamplers, flags);
+	}
+
+	static inline void Init_1_0(
+		_Out_ D3D12_VERSIONED_ROOT_SIGNATURE_DESC& desc,
+		UINT numParameters,
+		_In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER* _pParameters,
+		UINT numStaticSamplers = 0,
+		_In_reads_opt_(numStaticSamplers) const D3D12_STATIC_SAMPLER_DESC* _pStaticSamplers = nullptr,
+		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_NONE)
+	{
+		desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_0;
+		desc.Desc_1_0.NumParameters = numParameters;
+		desc.Desc_1_0.pParameters = _pParameters;
+		desc.Desc_1_0.NumStaticSamplers = numStaticSamplers;
+		desc.Desc_1_0.pStaticSamplers = _pStaticSamplers;
+		desc.Desc_1_0.Flags = flags;
+	}
+
+	inline void Init_1_1(
+		UINT numParameters,
+		_In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER1* _pParameters,
+		UINT numStaticSamplers = 0,
+		_In_reads_opt_(numStaticSamplers) const D3D12_STATIC_SAMPLER_DESC* _pStaticSamplers = nullptr,
+		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_NONE)
+	{
+		Init_1_1(*this, numParameters, _pParameters, numStaticSamplers, _pStaticSamplers, flags);
+	}
+
+	static inline void Init_1_1(
+		_Out_ D3D12_VERSIONED_ROOT_SIGNATURE_DESC& desc,
+		UINT numParameters,
+		_In_reads_opt_(numParameters) const D3D12_ROOT_PARAMETER1* _pParameters,
+		UINT numStaticSamplers = 0,
+		_In_reads_opt_(numStaticSamplers) const D3D12_STATIC_SAMPLER_DESC* _pStaticSamplers = nullptr,
+		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_NONE)
+	{
+		desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+		desc.Desc_1_1.NumParameters = numParameters;
+		desc.Desc_1_1.pParameters = _pParameters;
+		desc.Desc_1_1.NumStaticSamplers = numStaticSamplers;
+		desc.Desc_1_1.pStaticSamplers = _pStaticSamplers;
+		desc.Desc_1_1.Flags = flags;
+	}
+};
+
 
 inline void MemcpySubresource(
 	_In_ const D3D12_MEMCPY_DEST* pDest,
@@ -231,6 +646,122 @@ inline UINT64 UpdateSubresources(
 	return UpdateSubresources(pCmdList, pDestinationResource, pIntermediate, FirstSubresource, NumSubresources, RequiredSize, Layouts, NumRows, RowSizesInBytes, pSrcData);
 }
 
+inline HRESULT D3DX12SerializeVersionedRootSignature(
+	_In_ const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* pRootSignatureDesc,
+	D3D_ROOT_SIGNATURE_VERSION MaxVersion,
+	_Outptr_ ID3DBlob** ppBlob,
+	_Always_(_Outptr_opt_result_maybenull_) ID3DBlob** ppErrorBlob)
+{
+	if (ppErrorBlob != nullptr)
+	{
+		*ppErrorBlob = nullptr;
+	}
+
+	switch (MaxVersion)
+	{
+	case D3D_ROOT_SIGNATURE_VERSION_1_0:
+		switch (pRootSignatureDesc->Version)
+		{
+		case D3D_ROOT_SIGNATURE_VERSION_1_0:
+			return D3D12SerializeRootSignature(&pRootSignatureDesc->Desc_1_0, D3D_ROOT_SIGNATURE_VERSION_1, ppBlob, ppErrorBlob);
+
+		case D3D_ROOT_SIGNATURE_VERSION_1_1:
+		{
+			HRESULT hr = S_OK;
+			const D3D12_ROOT_SIGNATURE_DESC1& desc_1_1 = pRootSignatureDesc->Desc_1_1;
+
+			const SIZE_T ParametersSize = sizeof(D3D12_ROOT_PARAMETER) * desc_1_1.NumParameters;
+			void* pParameters = (ParametersSize > 0) ? HeapAlloc(GetProcessHeap(), 0, ParametersSize) : nullptr;
+			if (ParametersSize > 0 && pParameters == nullptr)
+			{
+				hr = E_OUTOFMEMORY;
+			}
+			auto pParameters_1_0 = reinterpret_cast<D3D12_ROOT_PARAMETER*>(pParameters);
+
+			if (SUCCEEDED(hr))
+			{
+				for (UINT n = 0; n < desc_1_1.NumParameters; n++)
+				{
+					__analysis_assume(ParametersSize == sizeof(D3D12_ROOT_PARAMETER) * desc_1_1.NumParameters);
+					pParameters_1_0[n].ParameterType = desc_1_1.pParameters[n].ParameterType;
+					pParameters_1_0[n].ShaderVisibility = desc_1_1.pParameters[n].ShaderVisibility;
+
+					switch (desc_1_1.pParameters[n].ParameterType)
+					{
+					case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
+						pParameters_1_0[n].Constants.Num32BitValues = desc_1_1.pParameters[n].Constants.Num32BitValues;
+						pParameters_1_0[n].Constants.RegisterSpace = desc_1_1.pParameters[n].Constants.RegisterSpace;
+						pParameters_1_0[n].Constants.ShaderRegister = desc_1_1.pParameters[n].Constants.ShaderRegister;
+						break;
+
+					case D3D12_ROOT_PARAMETER_TYPE_CBV:
+					case D3D12_ROOT_PARAMETER_TYPE_SRV:
+					case D3D12_ROOT_PARAMETER_TYPE_UAV:
+						pParameters_1_0[n].Descriptor.RegisterSpace = desc_1_1.pParameters[n].Descriptor.RegisterSpace;
+						pParameters_1_0[n].Descriptor.ShaderRegister = desc_1_1.pParameters[n].Descriptor.ShaderRegister;
+						break;
+
+					case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
+						const D3D12_ROOT_DESCRIPTOR_TABLE1& table_1_1 = desc_1_1.pParameters[n].DescriptorTable;
+
+						const SIZE_T DescriptorRangesSize = sizeof(D3D12_DESCRIPTOR_RANGE) * table_1_1.NumDescriptorRanges;
+						void* pDescriptorRanges = (DescriptorRangesSize > 0 && SUCCEEDED(hr)) ? HeapAlloc(GetProcessHeap(), 0, DescriptorRangesSize) : nullptr;
+						if (DescriptorRangesSize > 0 && pDescriptorRanges == nullptr)
+						{
+							hr = E_OUTOFMEMORY;
+						}
+						auto pDescriptorRanges_1_0 = reinterpret_cast<D3D12_DESCRIPTOR_RANGE*>(pDescriptorRanges);
+
+						if (SUCCEEDED(hr))
+						{
+							for (UINT x = 0; x < table_1_1.NumDescriptorRanges; x++)
+							{
+								__analysis_assume(DescriptorRangesSize == sizeof(D3D12_DESCRIPTOR_RANGE) * table_1_1.NumDescriptorRanges);
+								pDescriptorRanges_1_0[x].BaseShaderRegister = table_1_1.pDescriptorRanges[x].BaseShaderRegister;
+								pDescriptorRanges_1_0[x].NumDescriptors = table_1_1.pDescriptorRanges[x].NumDescriptors;
+								pDescriptorRanges_1_0[x].OffsetInDescriptorsFromTableStart = table_1_1.pDescriptorRanges[x].OffsetInDescriptorsFromTableStart;
+								pDescriptorRanges_1_0[x].RangeType = table_1_1.pDescriptorRanges[x].RangeType;
+								pDescriptorRanges_1_0[x].RegisterSpace = table_1_1.pDescriptorRanges[x].RegisterSpace;
+							}
+						}
+
+						D3D12_ROOT_DESCRIPTOR_TABLE& table_1_0 = pParameters_1_0[n].DescriptorTable;
+						table_1_0.NumDescriptorRanges = table_1_1.NumDescriptorRanges;
+						table_1_0.pDescriptorRanges = pDescriptorRanges_1_0;
+					}
+				}
+			}
+
+			if (SUCCEEDED(hr))
+			{
+				CD3DX12_ROOT_SIGNATURE_DESC desc_1_0(desc_1_1.NumParameters, pParameters_1_0, desc_1_1.NumStaticSamplers, desc_1_1.pStaticSamplers, desc_1_1.Flags);
+				hr = D3D12SerializeRootSignature(&desc_1_0, D3D_ROOT_SIGNATURE_VERSION_1, ppBlob, ppErrorBlob);
+			}
+
+			if (pParameters)
+			{
+				for (UINT n = 0; n < desc_1_1.NumParameters; n++)
+				{
+					if (desc_1_1.pParameters[n].ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
+					{
+						HeapFree(GetProcessHeap(), 0, reinterpret_cast<void*>(const_cast<D3D12_DESCRIPTOR_RANGE*>(pParameters_1_0[n].DescriptorTable.pDescriptorRanges)));
+					}
+				}
+				HeapFree(GetProcessHeap(), 0, pParameters);
+			}
+			return hr;
+		}
+		}
+		break;
+
+	case D3D_ROOT_SIGNATURE_VERSION_1_1:
+		return D3D12SerializeVersionedRootSignature(pRootSignatureDesc, ppBlob, ppErrorBlob);
+	}
+
+	return E_INVALIDARG;
+}
+
+
 static const DXGI_FORMAT FORMATS[] =
 {
 	DXGI_FORMAT_UNKNOWN,
@@ -280,6 +811,7 @@ struct SDescriptorHeap
 	ComPtr<ID3D12DescriptorHeap> m_descHeap;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_cpuDescStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_gpuDescStart;
+	UINT8* m_pData;
 	size_t m_descSize;
 
 	void Init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT numDescriptors, bool shaderVisible)
@@ -293,6 +825,8 @@ struct SDescriptorHeap
 		m_cpuDescStart = m_descHeap->GetCPUDescriptorHandleForHeapStart();
 		m_gpuDescStart = m_descHeap->GetGPUDescriptorHandleForHeapStart();
 		m_descSize = device->GetDescriptorHandleIncrementSize(type);
+		m_pData = nullptr;
+
 	}
 
 	inline D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle(UINT offset) const
@@ -629,16 +1163,29 @@ BlendState CreateBlendState(Blend src, Blend dst, BlendOperator mode, UINT mask,
 	return blendState;
 }
 
-RootSignature CreateRootSignature(SDevice* device)
+RootSignature CreateRootSignature(SDevice* device, UINT cbvCount)
 {
 	RootSignature rootSignature = new SRootSignature();
 
-	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-	rootSignatureDesc = { 0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT };
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	rootSignatureDesc.Init_1_1(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	UINT totalCount = cbvCount;
+	if (totalCount)
+	{
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+		CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, cbvCount, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+
+		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+		rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
+	}
 
 	ComPtr<ID3DBlob> signature;
 	ComPtr<ID3DBlob> error;
-	ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_1, &signature, &error));
 	ThrowIfFailed(device->device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature->rootSignature)));
 
 	return rootSignature;
@@ -821,6 +1368,48 @@ Buffer CreateBuffer(Device device, const BufferParams& params)
 	return buffer;
 }
 
+Buffer CreateVertexBuffer(SDevice* device, const void* pData, UINT size)
+{
+	BufferParams vertexBufferParams(size, HEAP_TYPE_DEFAULT, RESOURCE_STATE_COPY_DEST);
+	Buffer vertexBuffer = CreateBuffer(device, vertexBufferParams);
+	BufferParams vertexUploadBufferParams(size, HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ);
+	Buffer vertexUploadBuffer = CreateBuffer(device, vertexUploadBufferParams);
+	SubresourceParams vertexData = { pData, size, size };
+	Subresource(device, vertexBuffer, vertexUploadBuffer, vertexData);
+	return vertexBuffer;
+}
+
+Buffer CreateIndexBuffer(SDevice* device, const void* pData, UINT size)
+{
+	BufferParams indexBufferParams(size, HEAP_TYPE_DEFAULT, RESOURCE_STATE_COPY_DEST);
+	Buffer indexBuffer = CreateBuffer(device, indexBufferParams);
+	BufferParams indexUploadBufferParams(size, HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ);
+	Buffer indexUploadBuffer = CreateBuffer(device, indexUploadBufferParams);
+	SubresourceParams indexData = { pData, size, size };
+	Subresource(device, indexBuffer, indexUploadBuffer, indexData);
+	return indexBuffer;
+}
+
+DescriptorHeap CreateConstantBuffer(SDevice* device, const void* pData, UINT count, UINT size)
+{
+	DescriptorHeap result = new SDescriptorHeap();
+	result->Init(device->device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, count, true);
+
+
+	BufferParams constantBufferParams(1024 * 64, HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ);
+	Buffer constantBuffer = CreateBuffer(device, constantBufferParams);
+
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+	cbvDesc.BufferLocation = constantBuffer->buffer->GetGPUVirtualAddress();
+	cbvDesc.SizeInBytes = (size + 255) & ~255;
+	device->device->CreateConstantBufferView(&cbvDesc, result->GetCPUHandle(0));
+
+	CD3DX12_RANGE readRange(0, 0);
+	ThrowIfFailed(constantBuffer->buffer->Map(0, &readRange, reinterpret_cast<void**>(&result->m_pData)));
+	memcpy(result->m_pData, &pData, size);
+	return result;
+}
+
 void WaitForGPU(SDevice* device)
 {
 	// Schedule a Signal command in the queue.
@@ -864,6 +1453,11 @@ void Subresource(SDevice* device, SBuffer* destinationResource, SBuffer* interme
 	device->mainContext->commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(destinationResource->buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 }
 
+void UpdateBuffer(SDescriptorHeap* descriptor, void* pData, UINT size)
+{
+	memcpy(descriptor->m_pData, pData, size);
+}
+
 void Reset(SDevice* device, SPipeline* pipeline)
 {
 	ThrowIfFailed(device->commandAllocators[device->frameIndex]->commandAllocator->Reset());
@@ -888,8 +1482,16 @@ void SetGraphicsRootSignature(SDevice* device, SRootSignature* rootSignature)
 	device->mainContext->commandList->SetGraphicsRootSignature(rootSignature->rootSignature.Get());
 }
 
+void SetConstantBuffer(SDevice* device, SDescriptorHeap* descriptor)
+{
+	ID3D12DescriptorHeap* ppHeaps[] = { descriptor->m_descHeap.Get() };
+	device->mainContext->commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	device->mainContext->commandList->SetGraphicsRootDescriptorTable(0, descriptor->GetGPUHandle(0));
+}
+
 void SetPipeline(SDevice* device, SPipeline* pipeline)
 {
+	device->mainContext->commandList->SetPipelineState(pipeline->pipeline.Get());
 	device->mainContext->commandList->IASetPrimitiveTopology(pipeline->primitiveTopology);
 }
 

@@ -1,7 +1,7 @@
 #pragma once
+#include "Math.h"
 #include "RendererHelper.h"
 #include "ImageTools.h"
-#include "Vector.h"
 
 static const int FrameCount = 2;
 
@@ -289,24 +289,27 @@ inline ResourceState operator | (ResourceState a, ResourceState b) {
 
 Device CreateDevice(DeviceParams& params, HWND hwnd);
 RenderSetup CreateRenderSetup(Device device);
-RootSignature CreateRootSignature(SDevice* device);
+RootSignature CreateRootSignature(SDevice* device, UINT countantBufferNum);
 Blob CreateShaderFromFile(ShaderType shaderType, LPCWSTR filePath, std::string entryPoint, UINT flags);
 RenderPass CreateRenderPass(Device device, ImageFormat colorFormat, ImageFormat depthFormat, RenderPassFlags flags, UINT msaaSampler = 1);
 Pipeline CreateGraphicsPipeline(SDevice* device, PipelineParams& params);
 Buffer CreateBuffer(Device device, const BufferParams& params);
+Buffer CreateVertexBuffer(SDevice* device, const void* pData, UINT size);
+Buffer CreateIndexBuffer(SDevice* device, const void* pData, UINT size);
+DescriptorHeap CreateConstantBuffer(SDevice* device, const void* pData, UINT count, UINT size);
 VertexSetup CreateVertexSetup(SBuffer* vertexBuffer, UINT vertexBufferStride, SBuffer* indexBuffer, UINT indexBufferStride);
-
 BlendState CreateBlendState(Blend src, Blend dst, BlendOperator mode, UINT mask, bool alphaToCoverageEnable);
 
 void WaitForGPU(SDevice* device);
 void MoveToNextFrame(SDevice* device);
-
-
 void Subresource(SDevice* device, SBuffer* destinationResource, SBuffer* intermediate, SubresourceParams& data);
+void UpdateBuffer(SDescriptorHeap* descriptor, void* pData, UINT size);
+
 
 void Reset(SDevice* device, SPipeline* pipeline);
 
 void BeginRenderPass(SDevice* device, const DeviceParams& params, const float* clearColor = nullptr);
+void SetConstantBuffer(SDevice* device, SDescriptorHeap* descriptor);
 void SetPipeline(SDevice* device, SPipeline* pipeline);
 void SetGraphicsRootSignature(SDevice* device, SRootSignature* rootSignature);
 void SetVertexSetup(SDevice* device, SVertexSetup* vertexSetup);

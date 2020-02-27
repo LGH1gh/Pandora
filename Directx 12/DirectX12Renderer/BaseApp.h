@@ -2,6 +2,47 @@
 
 #include "Renderer.h"
 
+using namespace DirectX;
+
+struct Vertex
+{
+	XMFLOAT4 pos;
+	XMFLOAT4 color;
+};
+
+struct ConstantBuffer
+{
+	XMFLOAT4X4 worldViewProjection;
+	XMFLOAT4X4 rotateWithY;
+};
+
+struct Coordinate
+{
+	XMFLOAT3 cameraPosition;
+	XMFLOAT3 lookDirection;
+	XMFLOAT3 upDirection;
+	float yaw, pitch;
+	Coordinate() :
+		cameraPosition(0, 0, 10.0f),
+		yaw(XM_PI),
+		pitch(0.0f),
+		lookDirection(0, 0, -1),
+		upDirection(0, 1, 0)
+	{
+	}
+
+	XMMATRIX GetViewMatrix()
+	{
+		return XMMatrixLookAtRH(XMLoadFloat3(&cameraPosition), XMLoadFloat3(&lookDirection), XMLoadFloat3(&upDirection));
+	}
+
+	XMMATRIX GetProjectionMatrix(float fov, float aspectRatio, float nearPlane, float farPlane)
+	{
+		return XMMatrixPerspectiveFovRH(fov, aspectRatio, nearPlane, farPlane);
+	}
+
+};
+
 class BaseApp
 {
 public:
@@ -27,19 +68,15 @@ public:
 protected:
 	void PopulateCommand();
 
-	struct Vertex
-	{
-		VFLOAT3 pos;
-		VFLOAT4 color;
-	};
-
 	Device m_device;
 	DeviceParams m_deviceParams;
 	RootSignature m_rootSignature;
-	Pipeline m_pipeline1;
-	Pipeline m_pipeline2;
+	Pipeline m_pipeline1, m_pipeline2;
 	VertexSetup m_vertexSetup;
 
+	Coordinate m_coordinate;
+	ConstantBuffer m_constantBufferData;
+	DescriptorHeap m_constantBufferDesc;
 	BlendState m_blendState;
 
 	std::wstring m_title;

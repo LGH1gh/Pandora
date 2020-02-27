@@ -140,9 +140,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="BaseApp.h" />
-    <ClInclude Include="d3dx12.h" />
     <ClInclude Include="ImageTools.h" />
-    <ClInclude Include="Vector.h" />
+    <ClInclude Include="Math.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RendererHelper.h" />
   </ItemGroup>

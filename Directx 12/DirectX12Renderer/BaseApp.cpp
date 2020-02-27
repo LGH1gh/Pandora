@@ -1,6 +1,7 @@
 #include "BaseApp.h"
 
-BaseApp::BaseApp(UINT width, UINT height, std::wstring title)
+BaseApp::BaseApp(UINT width, UINT height, std::wstring title) :
+    m_coordinate()
 {
     m_deviceParams = { false, width, height };
     m_title = title;
@@ -13,7 +14,8 @@ BaseApp::~BaseApp()
 void BaseApp::OnInit()
 {
 	m_device = CreateDevice(m_deviceParams, m_hwnd);
-    m_rootSignature = CreateRootSignature(m_device);
+    m_rootSignature = CreateRootSignature(m_device, 1);
+    // m_blendState = CreateBlendState(BLEND_SRC_ALPHA, BLEND_INV_SRC_COLOR, BLEND_OP_ADD, 0xF, false);
 
     UINT compileFlags = COMPILE_DEBUG | COMPILE_SKIP_OPTIMIZATION;
     Blob vertexShader = CreateShaderFromFile(SHADER_TYPE_VERTEX_SHADER, L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\Shader.hlsl", "VSMain", compileFlags);
@@ -22,7 +24,7 @@ void BaseApp::OnInit()
     
     SAttributeDesc inputElementDesc[] =
     {
-        { "POSITION", 0, ATTRIBUTE_FORMAT_FLOAT3_32 },
+        { "POSITION", 0, ATTRIBUTE_FORMAT_FLOAT4_32 },
         { "COLOR", 0, ATTRIBUTE_FORMAT_FLOAT4_32 },
     };
 
@@ -43,61 +45,74 @@ void BaseApp::OnInit()
 
     Vertex triangleVertices[] = 
     {
-        { { 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-        { { 0.0f, -0.25f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-        { { -0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-        { { -0.25f, 0.0f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        { {  0.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+        { {  1.0f, -1.0f, -1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+        { { -1.0f, -1.0f, -1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+        { { 0.0f, -1.0f, 2.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
         
-        { { 0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
-        { { 0.5f, 0.75f, 0.0f }, { 0.0f, 1.0f, 1.0f, 1.0f } },
-        { { 0.75f, 0.5f, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f } },
+        { { 0.5f, 0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        { { 0.5f, 0.75f, 0.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, 1.0f } },
+        { { 0.75f, 0.5f, 0.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f } },
 
-        { { -0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
-        { { -0.5f, -0.75f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
-        { { -0.75f, -0.75f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
-        { { -0.75f, -0.5f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } }
+        { { -0.5f, -0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        { { -0.5f, -0.75f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        { { -0.75f, -0.75f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
+        { { -0.75f, -0.5f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }
     };
-    const UINT vertexBufferSize = sizeof(triangleVertices);
-
-    BufferParams vertexBufferParams(vertexBufferSize, HEAP_TYPE_DEFAULT, RESOURCE_STATE_COPY_DEST);
-    Buffer vertexBuffer = CreateBuffer(m_device, vertexBufferParams);
-    BufferParams vertexUploadBufferParams(vertexBufferSize, HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ);
-    Buffer vertexUploadBuffer = CreateBuffer(m_device, vertexUploadBufferParams);
-    SubresourceParams vertexData = { triangleVertices, vertexBufferSize, vertexBufferSize };
-    Subresource(m_device, vertexBuffer, vertexUploadBuffer, vertexData);
-
+    Buffer vertexBuffer = CreateVertexBuffer(m_device, triangleVertices, sizeof(triangleVertices));
 
     unsigned long indices[] =
     {
         0, 1, 2,
+        0, 1, 3,
         0, 2, 3,
+        1, 2, 3
+        //0, 2, 3,
 
-        4, 5, 6,
+        //4, 5, 6,
 
-        7, 8, 9,
-        7, 9, 10
+        //7, 8, 9,
+        //7, 9, 10
     };
-    const UINT indexBufferSize = sizeof(indices);
-
-    BufferParams indexBufferParams(indexBufferSize, HEAP_TYPE_DEFAULT, RESOURCE_STATE_COPY_DEST);
-    Buffer indexBuffer = CreateBuffer(m_device, indexBufferParams);
-    BufferParams indexUploadBufferParams(indexBufferSize, HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ);
-    Buffer indexUploadBuffer = CreateBuffer(m_device, indexUploadBufferParams);
-    SubresourceParams indexData = { indices, indexBufferSize, indexBufferSize };
-    Subresource(m_device, indexBuffer, indexUploadBuffer, indexData);
-
-    ExecuteCommand(m_device);
+    Buffer indexBuffer = CreateIndexBuffer(m_device, indices, sizeof(indices));
     m_vertexSetup = CreateVertexSetup(vertexBuffer, sizeof(Vertex), indexBuffer, sizeof(unsigned long));
 
+    m_constantBufferDesc = CreateConstantBuffer(m_device, &m_constantBufferData, 1, sizeof(m_constantBufferData));
 
-    
-	// m_blendState = CreateBlendState(BLEND_SRC_ALPHA, BLEND_INV_SRC_COLOR, BLEND_OP_ADD, 0xF, false);
+    ExecuteCommand(m_device);
+}
 
+XMFLOAT4 MatrixXVector (XMFLOAT4X4 matrix, XMFLOAT4 vector)
+{
+	XMFLOAT4 result = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+	result.x = matrix._11 * vector.x + matrix._12 * vector.y + matrix._13 * vector.z + matrix._14 * vector.w;
+	result.y = matrix._21 * vector.x + matrix._22 * vector.y + matrix._23 * vector.z + matrix._24 * vector.w;
+	result.z = matrix._31 * vector.x + matrix._32 * vector.y + matrix._33 * vector.z + matrix._34 * vector.w;
+	result.w = matrix._41 * vector.x + matrix._42 * vector.y + matrix._43 * vector.z + matrix._44 * vector.w;
+
+    result.x /= result.w;
+    result.y /= result.w;
+    result.z /= result.w;
+    result.w /= result.w;
+
+	return result;
 }
 
 void BaseApp::OnUpdate()
 {
-
+    static float rotateAngle = 0.001f;
+    ConstantBuffer constantBuffer = {};
+    XMStoreFloat4x4(&constantBuffer.worldViewProjection, XMMatrixMultiply(m_coordinate.GetViewMatrix(), m_coordinate.GetProjectionMatrix(0.8f, static_cast<float>(GetWidth()) / static_cast<float>(GetHeight()), 1.0f, 1000.0f)));
+    constantBuffer.rotateWithY = XMFLOAT4X4(
+        (float)cos(rotateAngle), 0, (float)sin(rotateAngle), 0,
+        0, 1, 0, 0,
+        (float)-sin(rotateAngle), 0, (float)cos(rotateAngle), 0,
+        0, 0, 0, 1
+    );
+    rotateAngle += 0.001f;
+    XMMATRIX proj = m_coordinate.GetProjectionMatrix(0.8f, static_cast<float>(GetWidth()) / static_cast<float>(GetHeight()), 1.0f, 1000.0f);
+    UpdateBuffer(m_constantBufferDesc, &constantBuffer, sizeof(constantBuffer));
 }
 
 void BaseApp::OnDestroy()
@@ -124,10 +139,14 @@ void BaseApp::PopulateCommand()
         SetGraphicsRootSignature(m_device, m_rootSignature);
         SetVertexSetup(m_device, m_vertexSetup);
         SetPipeline(m_device, m_pipeline1);
-        DrawIndexed(m_device, 0, 6);
+        SetConstantBuffer(m_device, m_constantBufferDesc);
+        DrawIndexed(m_device, 0, 3);
+        DrawIndexed(m_device, 3, 3);
         DrawIndexed(m_device, 6, 3);
+        DrawIndexed(m_device, 9, 3);
+        /*DrawIndexed(m_device, 6, 3);
         SetPipeline(m_device, m_pipeline2);
-        DrawIndexed(m_device, 9, 6);
+        DrawIndexed(m_device, 9, 6);*/
     }
     EndRenderPass(m_device);
 

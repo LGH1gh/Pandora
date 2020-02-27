@@ -1,6 +1,6 @@
 #include "BaseApp.h"
 
-extern BaseApp* app = new BaseApp(1280, 720, L"Renderer");
+extern BaseApp* app = new BaseApp(720, 720, L"Renderer");
 
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {

@@ -9,6 +9,12 @@
 //
 //*********************************************************
 
+cbuffer ConstantBuffer : register(b0)
+{
+    row_major float4x4 g_mWorldViewProj;
+    row_major float4x4 g_mRotateWithY;
+}
+
 struct PSInput
 {
     float4 position : SV_POSITION;
@@ -18,8 +24,7 @@ struct PSInput
 PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
 {
     PSInput result;
-
-    result.position = position;
+    result.position = mul(mul(position, g_mRotateWithY), g_mWorldViewProj);
     result.color = color;
 
     return result;
