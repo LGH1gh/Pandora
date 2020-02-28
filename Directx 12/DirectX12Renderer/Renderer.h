@@ -20,6 +20,7 @@ typedef struct SResourceTable* ResourceTable;
 typedef struct SSamplerTable* SamplerTable;
 typedef struct SRenderSetup* RenderSetup;
 typedef struct SBlob* Blob;
+typedef struct SDepthStencil* DepthStencil;
 
 typedef
 enum ResourceState
@@ -297,6 +298,9 @@ Buffer CreateBuffer(Device device, const BufferParams& params);
 Buffer CreateVertexBuffer(SDevice* device, const void* pData, UINT size);
 Buffer CreateIndexBuffer(SDevice* device, const void* pData, UINT size);
 DescriptorHeap CreateConstantBuffer(SDevice* device, const void* pData, UINT count, UINT size);
+Buffer CreateDepthStencilBuffer(SDevice* device, UINT width, UINT height);
+DescriptorHeap CreateDepthStencilDescriptorBuffer(SDevice* device, SBuffer* depthStencilBuffer);
+
 VertexSetup CreateVertexSetup(SBuffer* vertexBuffer, UINT vertexBufferStride, SBuffer* indexBuffer, UINT indexBufferStride);
 BlendState CreateBlendState(Blend src, Blend dst, BlendOperator mode, UINT mask, bool alphaToCoverageEnable);
 
@@ -308,7 +312,7 @@ void UpdateBuffer(SDescriptorHeap* descriptor, void* pData, UINT size);
 
 void Reset(SDevice* device, SPipeline* pipeline);
 
-void BeginRenderPass(SDevice* device, const DeviceParams& params, const float* clearColor = nullptr);
+void BeginRenderPass(SDevice* device, const DeviceParams& params, SDepthStencil* depthStencil = nullptr, const float* clearColor = nullptr);
 void SetConstantBuffer(SDevice* device, SDescriptorHeap* descriptor);
 void SetPipeline(SDevice* device, SPipeline* pipeline);
 void SetGraphicsRootSignature(SDevice* device, SRootSignature* rootSignature);
@@ -316,7 +320,7 @@ void SetVertexSetup(SDevice* device, SVertexSetup* vertexSetup);
 
 void Draw(SDevice* device, UINT start, UINT count);
 void DrawIndexed(SDevice* device, UINT start, UINT count);
-void DrawIndexInstanced(SDevice* device, UINT start, UINT count, UINT startInstance, UINT instanceCount);
+void DrawIndexInstanced(SDevice* device, UINT StartIndexLocation, UINT IndexCountPerInstance, UINT StartInstanceLocation, UINT InstanceCount);
 void EndRenderPass(SDevice* device);
 
 void ExecuteCommand(SDevice* device);
@@ -325,3 +329,5 @@ Context GetContext(SDevice* device);
 RenderPass GetRenderPass(SDevice* device);
 
 void Destory(SDevice* device);
+
+DepthStencil CreateDepthStencil(SDevice* device, UINT width, UINT height);

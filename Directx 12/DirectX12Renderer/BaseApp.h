@@ -77,6 +77,8 @@ protected:
 	Coordinate m_coordinate;
 	ConstantBuffer m_constantBufferData;
 	DescriptorHeap m_constantBufferDesc;
+	DepthStencil m_depthStencil;
+
 	BlendState m_blendState;
 
 	std::wstring m_title;

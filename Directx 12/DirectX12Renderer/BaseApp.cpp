@@ -14,7 +14,7 @@ BaseApp::~BaseApp()
 void BaseApp::OnInit()
 {
 	m_device = CreateDevice(m_deviceParams, m_hwnd);
-    m_rootSignature = CreateRootSignature(m_device, 1);
+    m_rootSignature = CreateRootSignature(m_device, 0);
     // m_blendState = CreateBlendState(BLEND_SRC_ALPHA, BLEND_INV_SRC_COLOR, BLEND_OP_ADD, 0xF, false);
 
     UINT compileFlags = COMPILE_DEBUG | COMPILE_SKIP_OPTIMIZATION;
@@ -28,8 +28,6 @@ void BaseApp::OnInit()
         { "COLOR", 0, ATTRIBUTE_FORMAT_FLOAT4_32 },
     };
 
-    //RenderPass renderPass = CreateRenderPass(m_device, IMAGE_FORMAT_R8G8B8A8_UNORM, IMAGE_FORMAT_R8G8B8A8_UNORM, CLEAR_COLOR);
-
     PipelineParams pipelineParams;
     pipelineParams.attributeCount = 2;
     pipelineParams.attributes = inputElementDesc;
@@ -40,24 +38,26 @@ void BaseApp::OnInit()
     pipelineParams.renderPass = GetRenderPass(m_device);
     m_pipeline1 = CreateGraphicsPipeline(m_device, pipelineParams);
 
-    pipelineParams.ps = { pixelShader2->address, pixelShader2->size };
-    m_pipeline2 = CreateGraphicsPipeline(m_device, pipelineParams);
-
     Vertex triangleVertices[] = 
     {
         { {  0.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
         { {  1.0f, -1.0f, -1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-        { { -1.0f, -1.0f, -1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-        { { 0.0f, -1.0f, 2.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
-        
-        { { 0.5f, 0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
-        { { 0.5f, 0.75f, 0.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, 1.0f } },
-        { { 0.75f, 0.5f, 0.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f } },
+        { { -1.0f, -1.0f, -1.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f } },
+        { { 0.0f, -1.0f, 2.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
 
-        { { -0.5f, -0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
-        { { -0.5f, -0.75f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
-        { { -0.75f, -0.75f, 0.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
-        { { -0.75f, -0.5f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }
+
+        // a triangle
+        // first quad (closer to camera, blue)
+        { {-0.5f,  0.5f, 0.5f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f} },
+        {  {0.5f, -0.5f, 0.5f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f} },
+        { {-0.5f, -0.5f, 0.5f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f} },
+        {  {0.5f,  0.5f, 0.5f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f} },
+
+        // second quad (further from camera, green)
+        { {-0.75f,  0.75f,  0.7f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f} },
+        {   {0.0f,  0.0f, 0.7f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f} },
+        { {-0.75f,  0.0f, 0.7f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f} },
+        {   {0.0f,  0.75f,  0.7f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f} }
     };
     Buffer vertexBuffer = CreateVertexBuffer(m_device, triangleVertices, sizeof(triangleVertices));
 
@@ -66,7 +66,13 @@ void BaseApp::OnInit()
         0, 1, 2,
         0, 1, 3,
         0, 2, 3,
-        1, 2, 3
+        1, 2, 3,
+
+        4, 5, 6,
+        4, 7, 5,
+
+        8, 9, 10,
+        8, 11, 9,
         //0, 2, 3,
 
         //4, 5, 6,
@@ -77,8 +83,8 @@ void BaseApp::OnInit()
     Buffer indexBuffer = CreateIndexBuffer(m_device, indices, sizeof(indices));
     m_vertexSetup = CreateVertexSetup(vertexBuffer, sizeof(Vertex), indexBuffer, sizeof(unsigned long));
 
-    m_constantBufferDesc = CreateConstantBuffer(m_device, &m_constantBufferData, 1, sizeof(m_constantBufferData));
-
+    //m_constantBufferDesc = CreateConstantBuffer(m_device, &m_constantBufferData, 1, sizeof(m_constantBufferData));
+    m_depthStencil = CreateDepthStencil(m_device, GetWidth(), GetHeight());
     ExecuteCommand(m_device);
 }
 
@@ -101,18 +107,18 @@ XMFLOAT4 MatrixXVector (XMFLOAT4X4 matrix, XMFLOAT4 vector)
 
 void BaseApp::OnUpdate()
 {
-    static float rotateAngle = 0.001f;
-    ConstantBuffer constantBuffer = {};
-    XMStoreFloat4x4(&constantBuffer.worldViewProjection, XMMatrixMultiply(m_coordinate.GetViewMatrix(), m_coordinate.GetProjectionMatrix(0.8f, static_cast<float>(GetWidth()) / static_cast<float>(GetHeight()), 1.0f, 1000.0f)));
-    constantBuffer.rotateWithY = XMFLOAT4X4(
-        (float)cos(rotateAngle), 0, (float)sin(rotateAngle), 0,
-        0, 1, 0, 0,
-        (float)-sin(rotateAngle), 0, (float)cos(rotateAngle), 0,
-        0, 0, 0, 1
-    );
-    rotateAngle += 0.001f;
-    XMMATRIX proj = m_coordinate.GetProjectionMatrix(0.8f, static_cast<float>(GetWidth()) / static_cast<float>(GetHeight()), 1.0f, 1000.0f);
-    UpdateBuffer(m_constantBufferDesc, &constantBuffer, sizeof(constantBuffer));
+    //static float rotateAngle = 0;
+    //ConstantBuffer constantBuffer = {};
+    //XMStoreFloat4x4(&constantBuffer.worldViewProjection, XMMatrixMultiply(m_coordinate.GetViewMatrix(), m_coordinate.GetProjectionMatrix(0.8f, static_cast<float>(GetWidth()) / static_cast<float>(GetHeight()), 1.0f, 1000.0f)));
+    //constantBuffer.rotateWithY = XMFLOAT4X4(
+    //    (float)cos(rotateAngle), 0, (float)sin(rotateAngle), 0,
+    //    0, 1, 0, 0,
+    //    (float)-sin(rotateAngle), 0, (float)cos(rotateAngle), 0,
+    //    0, 0, 0, 1
+    //);
+    //rotateAngle += 0.001f;
+    //XMMATRIX proj = m_coordinate.GetProjectionMatrix(0.8f, static_cast<float>(GetWidth()) / static_cast<float>(GetHeight()), 1.0f, 1000.0f);
+    //UpdateBuffer(m_constantBufferDesc, &constantBuffer, sizeof(constantBuffer));
 }
 
 void BaseApp::OnDestroy()
@@ -134,16 +140,23 @@ void BaseApp::PopulateCommand()
     Reset(m_device, m_pipeline1);
 
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-    BeginRenderPass(m_device, m_deviceParams, clearColor);
+    BeginRenderPass(m_device, m_deviceParams, m_depthStencil, clearColor);
     {
         SetGraphicsRootSignature(m_device, m_rootSignature);
         SetVertexSetup(m_device, m_vertexSetup);
         SetPipeline(m_device, m_pipeline1);
-        SetConstantBuffer(m_device, m_constantBufferDesc);
-        DrawIndexed(m_device, 0, 3);
-        DrawIndexed(m_device, 3, 3);
-        DrawIndexed(m_device, 6, 3);
-        DrawIndexed(m_device, 9, 3);
+        //SetConstantBuffer(m_device, m_constantBufferDesc);
+        //DrawIndexed(m_device, 9, 3);
+        //DrawIndexed(m_device, 3, 3);
+        //DrawIndexed(m_device, 0, 3);
+        //DrawIndexed(m_device, 6, 3);
+        DrawIndexInstanced(m_device, 18, 6, 1, 8);
+        DrawIndexInstanced(m_device, 12, 6, 1, 4);
+
+        /*DrawIndexed(m_device, 18, 3);
+        DrawIndexed(m_device, 21, 3);
+        DrawIndexed(m_device, 12, 3);
+        DrawIndexed(m_device, 15, 3);*/
         /*DrawIndexed(m_device, 6, 3);
         SetPipeline(m_device, m_pipeline2);
         DrawIndexed(m_device, 9, 6);*/

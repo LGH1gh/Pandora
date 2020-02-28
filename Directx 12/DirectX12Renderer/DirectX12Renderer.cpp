@@ -21,6 +21,206 @@ using Microsoft::WRL::ComPtr;
 struct CD3DX12_DEFAULT {};
 extern const DECLSPEC_SELECTANY CD3DX12_DEFAULT D3D12_DEFAULT;
 
+inline UINT8 D3D12GetFormatPlaneCount(
+	_In_ ID3D12Device* pDevice,
+	DXGI_FORMAT Format
+)
+{
+	D3D12_FEATURE_DATA_FORMAT_INFO formatInfo = { Format, 0 };
+	if (FAILED(pDevice->CheckFeatureSupport(D3D12_FEATURE_FORMAT_INFO, &formatInfo, sizeof(formatInfo))))
+	{
+		return 0;
+	}
+	return formatInfo.PlaneCount;
+}
+
+inline UINT D3D12CalcSubresource(UINT MipSlice, UINT ArraySlice, UINT PlaneSlice, UINT MipLevels, UINT ArraySize)
+{
+	return MipSlice + ArraySlice * MipLevels + PlaneSlice * MipLevels * ArraySize;
+}
+
+struct CD3DX12_BLEND_DESC : public D3D12_BLEND_DESC
+{
+	CD3DX12_BLEND_DESC() = default;
+	explicit CD3DX12_BLEND_DESC(const D3D12_BLEND_DESC& o) :
+		D3D12_BLEND_DESC(o)
+	{}
+	explicit CD3DX12_BLEND_DESC(CD3DX12_DEFAULT)
+	{
+		AlphaToCoverageEnable = FALSE;
+		IndependentBlendEnable = FALSE;
+		const D3D12_RENDER_TARGET_BLEND_DESC defaultRenderTargetBlendDesc =
+		{
+			FALSE,FALSE,
+			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+			D3D12_LOGIC_OP_NOOP,
+			D3D12_COLOR_WRITE_ENABLE_ALL,
+		};
+		for (UINT i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++i)
+			RenderTarget[i] = defaultRenderTargetBlendDesc;
+	}
+};
+
+struct CD3DX12_CPU_DESCRIPTOR_HANDLE : public D3D12_CPU_DESCRIPTOR_HANDLE
+{
+	CD3DX12_CPU_DESCRIPTOR_HANDLE() = default;
+	explicit CD3DX12_CPU_DESCRIPTOR_HANDLE(const D3D12_CPU_DESCRIPTOR_HANDLE& o) :
+		D3D12_CPU_DESCRIPTOR_HANDLE(o)
+	{}
+	CD3DX12_CPU_DESCRIPTOR_HANDLE(CD3DX12_DEFAULT) { ptr = 0; }
+	CD3DX12_CPU_DESCRIPTOR_HANDLE(_In_ const D3D12_CPU_DESCRIPTOR_HANDLE& other, INT offsetScaledByIncrementSize)
+	{
+		InitOffsetted(other, offsetScaledByIncrementSize);
+	}
+	CD3DX12_CPU_DESCRIPTOR_HANDLE(_In_ const D3D12_CPU_DESCRIPTOR_HANDLE& other, INT offsetInDescriptors, UINT descriptorIncrementSize)
+	{
+		InitOffsetted(other, offsetInDescriptors, descriptorIncrementSize);
+	}
+	CD3DX12_CPU_DESCRIPTOR_HANDLE& Offset(INT offsetInDescriptors, UINT descriptorIncrementSize)
+	{
+		ptr = SIZE_T(INT64(ptr) + INT64(offsetInDescriptors) * INT64(descriptorIncrementSize));
+		return *this;
+	}
+	CD3DX12_CPU_DESCRIPTOR_HANDLE& Offset(INT offsetScaledByIncrementSize)
+	{
+		ptr = SIZE_T(INT64(ptr) + INT64(offsetScaledByIncrementSize));
+		return *this;
+	}
+	bool operator==(_In_ const D3D12_CPU_DESCRIPTOR_HANDLE& other) const
+	{
+		return (ptr == other.ptr);
+	}
+	bool operator!=(_In_ const D3D12_CPU_DESCRIPTOR_HANDLE& other) const
+	{
+		return (ptr != other.ptr);
+	}
+	CD3DX12_CPU_DESCRIPTOR_HANDLE& operator=(const D3D12_CPU_DESCRIPTOR_HANDLE& other)
+	{
+		ptr = other.ptr;
+		return *this;
+	}
+
+	inline void InitOffsetted(_In_ const D3D12_CPU_DESCRIPTOR_HANDLE& base, INT offsetScaledByIncrementSize)
+	{
+		InitOffsetted(*this, base, offsetScaledByIncrementSize);
+	}
+
+	inline void InitOffsetted(_In_ const D3D12_CPU_DESCRIPTOR_HANDLE& base, INT offsetInDescriptors, UINT descriptorIncrementSize)
+	{
+		InitOffsetted(*this, base, offsetInDescriptors, descriptorIncrementSize);
+	}
+
+	static inline void InitOffsetted(_Out_ D3D12_CPU_DESCRIPTOR_HANDLE& handle, _In_ const D3D12_CPU_DESCRIPTOR_HANDLE& base, INT offsetScaledByIncrementSize)
+	{
+		handle.ptr = SIZE_T(INT64(base.ptr) + INT64(offsetScaledByIncrementSize));
+	}
+
+	static inline void InitOffsetted(_Out_ D3D12_CPU_DESCRIPTOR_HANDLE& handle, _In_ const D3D12_CPU_DESCRIPTOR_HANDLE& base, INT offsetInDescriptors, UINT descriptorIncrementSize)
+	{
+		handle.ptr = SIZE_T(INT64(base.ptr) + INT64(offsetInDescriptors) * INT64(descriptorIncrementSize));
+	}
+};
+
+struct CD3DX12_DEPTH_STENCIL_DESC : public D3D12_DEPTH_STENCIL_DESC
+{
+	CD3DX12_DEPTH_STENCIL_DESC() = default;
+	explicit CD3DX12_DEPTH_STENCIL_DESC(const D3D12_DEPTH_STENCIL_DESC& o) :
+		D3D12_DEPTH_STENCIL_DESC(o)
+	{}
+	explicit CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT)
+	{
+		DepthEnable = TRUE;
+		DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		StencilEnable = FALSE;
+		StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK;
+		StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK;
+		const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp =
+		{ D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
+		FrontFace = defaultStencilOp;
+		BackFace = defaultStencilOp;
+	}
+	explicit CD3DX12_DEPTH_STENCIL_DESC(
+		BOOL depthEnable,
+		D3D12_DEPTH_WRITE_MASK depthWriteMask,
+		D3D12_COMPARISON_FUNC depthFunc,
+		BOOL stencilEnable,
+		UINT8 stencilReadMask,
+		UINT8 stencilWriteMask,
+		D3D12_STENCIL_OP frontStencilFailOp,
+		D3D12_STENCIL_OP frontStencilDepthFailOp,
+		D3D12_STENCIL_OP frontStencilPassOp,
+		D3D12_COMPARISON_FUNC frontStencilFunc,
+		D3D12_STENCIL_OP backStencilFailOp,
+		D3D12_STENCIL_OP backStencilDepthFailOp,
+		D3D12_STENCIL_OP backStencilPassOp,
+		D3D12_COMPARISON_FUNC backStencilFunc)
+	{
+		DepthEnable = depthEnable;
+		DepthWriteMask = depthWriteMask;
+		DepthFunc = depthFunc;
+		StencilEnable = stencilEnable;
+		StencilReadMask = stencilReadMask;
+		StencilWriteMask = stencilWriteMask;
+		FrontFace.StencilFailOp = frontStencilFailOp;
+		FrontFace.StencilDepthFailOp = frontStencilDepthFailOp;
+		FrontFace.StencilPassOp = frontStencilPassOp;
+		FrontFace.StencilFunc = frontStencilFunc;
+		BackFace.StencilFailOp = backStencilFailOp;
+		BackFace.StencilDepthFailOp = backStencilDepthFailOp;
+		BackFace.StencilPassOp = backStencilPassOp;
+		BackFace.StencilFunc = backStencilFunc;
+	}
+};
+
+struct CD3DX12_HEAP_PROPERTIES : public D3D12_HEAP_PROPERTIES
+{
+	CD3DX12_HEAP_PROPERTIES() = default;
+	explicit CD3DX12_HEAP_PROPERTIES(const D3D12_HEAP_PROPERTIES& o) :
+		D3D12_HEAP_PROPERTIES(o)
+	{}
+	CD3DX12_HEAP_PROPERTIES(
+		D3D12_CPU_PAGE_PROPERTY cpuPageProperty,
+		D3D12_MEMORY_POOL memoryPoolPreference,
+		UINT creationNodeMask = 1,
+		UINT nodeMask = 1)
+	{
+		Type = D3D12_HEAP_TYPE_CUSTOM;
+		CPUPageProperty = cpuPageProperty;
+		MemoryPoolPreference = memoryPoolPreference;
+		CreationNodeMask = creationNodeMask;
+		VisibleNodeMask = nodeMask;
+	}
+	explicit CD3DX12_HEAP_PROPERTIES(
+		D3D12_HEAP_TYPE type,
+		UINT creationNodeMask = 1,
+		UINT nodeMask = 1)
+	{
+		Type = type;
+		CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+		MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+		CreationNodeMask = creationNodeMask;
+		VisibleNodeMask = nodeMask;
+	}
+	bool IsCPUAccessible() const
+	{
+		return Type == D3D12_HEAP_TYPE_UPLOAD || Type == D3D12_HEAP_TYPE_READBACK || (Type == D3D12_HEAP_TYPE_CUSTOM &&
+			(CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE || CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_BACK));
+	}
+};
+inline bool operator==(const D3D12_HEAP_PROPERTIES& l, const D3D12_HEAP_PROPERTIES& r)
+{
+	return l.Type == r.Type && l.CPUPageProperty == r.CPUPageProperty &&
+		l.MemoryPoolPreference == r.MemoryPoolPreference &&
+		l.CreationNodeMask == r.CreationNodeMask &&
+		l.VisibleNodeMask == r.VisibleNodeMask;
+}
+inline bool operator!=(const D3D12_HEAP_PROPERTIES& l, const D3D12_HEAP_PROPERTIES& r)
+{
+	return !(l == r);
+}
+
 struct CD3DX12_RANGE : public D3D12_RANGE
 {
 	CD3DX12_RANGE() = default;
@@ -107,6 +307,133 @@ struct CD3DX12_RESOURCE_BARRIER : public D3D12_RESOURCE_BARRIER
         return result;
     }
 };
+
+struct CD3DX12_RESOURCE_DESC : public D3D12_RESOURCE_DESC
+{
+	CD3DX12_RESOURCE_DESC() = default;
+	explicit CD3DX12_RESOURCE_DESC(const D3D12_RESOURCE_DESC& o) :
+		D3D12_RESOURCE_DESC(o)
+	{}
+	CD3DX12_RESOURCE_DESC(
+		D3D12_RESOURCE_DIMENSION dimension,
+		UINT64 alignment,
+		UINT64 width,
+		UINT height,
+		UINT16 depthOrArraySize,
+		UINT16 mipLevels,
+		DXGI_FORMAT format,
+		UINT sampleCount,
+		UINT sampleQuality,
+		D3D12_TEXTURE_LAYOUT layout,
+		D3D12_RESOURCE_FLAGS flags)
+	{
+		Dimension = dimension;
+		Alignment = alignment;
+		Width = width;
+		Height = height;
+		DepthOrArraySize = depthOrArraySize;
+		MipLevels = mipLevels;
+		Format = format;
+		SampleDesc.Count = sampleCount;
+		SampleDesc.Quality = sampleQuality;
+		Layout = layout;
+		Flags = flags;
+	}
+	static inline CD3DX12_RESOURCE_DESC Buffer(
+		const D3D12_RESOURCE_ALLOCATION_INFO& resAllocInfo,
+		D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE)
+	{
+		return CD3DX12_RESOURCE_DESC(D3D12_RESOURCE_DIMENSION_BUFFER, resAllocInfo.Alignment, resAllocInfo.SizeInBytes,
+			1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, flags);
+	}
+	static inline CD3DX12_RESOURCE_DESC Buffer(
+		UINT64 width,
+		D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE,
+		UINT64 alignment = 0)
+	{
+		return CD3DX12_RESOURCE_DESC(D3D12_RESOURCE_DIMENSION_BUFFER, alignment, width, 1, 1, 1,
+			DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, flags);
+	}
+	static inline CD3DX12_RESOURCE_DESC Tex1D(
+		DXGI_FORMAT format,
+		UINT64 width,
+		UINT16 arraySize = 1,
+		UINT16 mipLevels = 0,
+		D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE,
+		D3D12_TEXTURE_LAYOUT layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		UINT64 alignment = 0)
+	{
+		return CD3DX12_RESOURCE_DESC(D3D12_RESOURCE_DIMENSION_TEXTURE1D, alignment, width, 1, arraySize,
+			mipLevels, format, 1, 0, layout, flags);
+	}
+	static inline CD3DX12_RESOURCE_DESC Tex2D(
+		DXGI_FORMAT format,
+		UINT64 width,
+		UINT height,
+		UINT16 arraySize = 1,
+		UINT16 mipLevels = 0,
+		UINT sampleCount = 1,
+		UINT sampleQuality = 0,
+		D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE,
+		D3D12_TEXTURE_LAYOUT layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		UINT64 alignment = 0)
+	{
+		return CD3DX12_RESOURCE_DESC(D3D12_RESOURCE_DIMENSION_TEXTURE2D, alignment, width, height, arraySize,
+			mipLevels, format, sampleCount, sampleQuality, layout, flags);
+	}
+	static inline CD3DX12_RESOURCE_DESC Tex3D(
+		DXGI_FORMAT format,
+		UINT64 width,
+		UINT height,
+		UINT16 depth,
+		UINT16 mipLevels = 0,
+		D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE,
+		D3D12_TEXTURE_LAYOUT layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		UINT64 alignment = 0)
+	{
+		return CD3DX12_RESOURCE_DESC(D3D12_RESOURCE_DIMENSION_TEXTURE3D, alignment, width, height, depth,
+			mipLevels, format, 1, 0, layout, flags);
+	}
+	inline UINT16 Depth() const
+	{
+		return (Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1);
+	}
+	inline UINT16 ArraySize() const
+	{
+		return (Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1);
+	}
+	inline UINT8 PlaneCount(_In_ ID3D12Device* pDevice) const
+	{
+		return D3D12GetFormatPlaneCount(pDevice, Format);
+	}
+	inline UINT Subresources(_In_ ID3D12Device* pDevice) const
+	{
+		return MipLevels * ArraySize() * PlaneCount(pDevice);
+	}
+	inline UINT CalcSubresource(UINT MipSlice, UINT ArraySlice, UINT PlaneSlice)
+	{
+		return D3D12CalcSubresource(MipSlice, ArraySlice, PlaneSlice, MipLevels, ArraySize());
+	}
+};
+inline bool operator==(const D3D12_RESOURCE_DESC& l, const D3D12_RESOURCE_DESC& r)
+{
+	return l.Dimension == r.Dimension &&
+		l.Alignment == r.Alignment &&
+		l.Width == r.Width &&
+		l.Height == r.Height &&
+		l.DepthOrArraySize == r.DepthOrArraySize &&
+		l.MipLevels == r.MipLevels &&
+		l.Format == r.Format &&
+		l.SampleDesc.Count == r.SampleDesc.Count &&
+		l.SampleDesc.Quality == r.SampleDesc.Quality &&
+		l.Layout == r.Layout &&
+		l.Flags == r.Flags;
+}
+inline bool operator!=(const D3D12_RESOURCE_DESC& l, const D3D12_RESOURCE_DESC& r)
+{
+	return !(l == r);
+}
+
 
 struct CD3DX12_ROOT_SIGNATURE_DESC : public D3D12_ROOT_SIGNATURE_DESC
 {
@@ -765,45 +1092,128 @@ inline HRESULT D3DX12SerializeVersionedRootSignature(
 static const DXGI_FORMAT FORMATS[] =
 {
 	DXGI_FORMAT_UNKNOWN,
-
-	DXGI_FORMAT_R8_UNORM,
-	DXGI_FORMAT_R8_UINT,
-
-	DXGI_FORMAT_R8G8_UNORM,
-	DXGI_FORMAT_R8G8_UINT,
-
-	DXGI_FORMAT_R8G8B8A8_UNORM,
-	DXGI_FORMAT_R8G8B8A8_UINT,
-
-	DXGI_FORMAT_R16_UNORM,
-	DXGI_FORMAT_R16_UINT,
-	DXGI_FORMAT_R16_FLOAT,
-
-	DXGI_FORMAT_R16G16_UNORM,
-	DXGI_FORMAT_R16G16_UINT,
-	DXGI_FORMAT_R16G16_FLOAT,
-
+	DXGI_FORMAT_R32G32B32A32_TYPELESS,
+	DXGI_FORMAT_R32G32B32A32_FLOAT,
+	DXGI_FORMAT_R32G32B32A32_UINT,
+	DXGI_FORMAT_R32G32B32A32_SINT,
+	DXGI_FORMAT_R32G32B32_TYPELESS,
+	DXGI_FORMAT_R32G32B32_FLOAT,
+	DXGI_FORMAT_R32G32B32_UINT,
+	DXGI_FORMAT_R32G32B32_SINT,
+	DXGI_FORMAT_R16G16B16A16_TYPELESS,
+	DXGI_FORMAT_R16G16B16A16_FLOAT,
 	DXGI_FORMAT_R16G16B16A16_UNORM,
 	DXGI_FORMAT_R16G16B16A16_UINT,
-	DXGI_FORMAT_R16G16B16A16_FLOAT,
-
-	DXGI_FORMAT_R32_UINT,
-	DXGI_FORMAT_R32_FLOAT,
-
-	DXGI_FORMAT_R32G32_UINT,
+	DXGI_FORMAT_R16G16B16A16_SNORM,
+	DXGI_FORMAT_R16G16B16A16_SINT,
+	DXGI_FORMAT_R32G32_TYPELESS,
 	DXGI_FORMAT_R32G32_FLOAT,
-
-	DXGI_FORMAT_R32G32B32A32_UINT,
-	DXGI_FORMAT_R32G32B32A32_FLOAT,
-
-	DXGI_FORMAT_BC1_UNORM,
-	DXGI_FORMAT_BC2_UNORM,
-	DXGI_FORMAT_BC3_UNORM,
-	DXGI_FORMAT_BC4_UNORM,
-	DXGI_FORMAT_BC5_UNORM,
-	DXGI_FORMAT_BC7_UNORM,
-
+	DXGI_FORMAT_R32G32_UINT,
+	DXGI_FORMAT_R32G32_SINT,
+	DXGI_FORMAT_R32G8X24_TYPELESS,
+	DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
+	DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS,
+	DXGI_FORMAT_X32_TYPELESS_G8X24_UINT,
+	DXGI_FORMAT_R10G10B10A2_TYPELESS,
+	DXGI_FORMAT_R10G10B10A2_UNORM,
+	DXGI_FORMAT_R10G10B10A2_UINT,
+	DXGI_FORMAT_R11G11B10_FLOAT,
+	DXGI_FORMAT_R8G8B8A8_TYPELESS,
+	DXGI_FORMAT_R8G8B8A8_UNORM,
+	DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+	DXGI_FORMAT_R8G8B8A8_UINT,
+	DXGI_FORMAT_R8G8B8A8_SNORM,
+	DXGI_FORMAT_R8G8B8A8_SINT,
+	DXGI_FORMAT_R16G16_TYPELESS,
+	DXGI_FORMAT_R16G16_FLOAT,
+	DXGI_FORMAT_R16G16_UNORM,
+	DXGI_FORMAT_R16G16_UINT,
+	DXGI_FORMAT_R16G16_SNORM,
+	DXGI_FORMAT_R16G16_SINT,
+	DXGI_FORMAT_R32_TYPELESS,
+	DXGI_FORMAT_D32_FLOAT,
+	DXGI_FORMAT_R32_FLOAT,
+	DXGI_FORMAT_R32_UINT,
+	DXGI_FORMAT_R32_SINT,
+	DXGI_FORMAT_R24G8_TYPELESS,
+	DXGI_FORMAT_D24_UNORM_S8_UINT,
+	DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
+	DXGI_FORMAT_X24_TYPELESS_G8_UINT,
+	DXGI_FORMAT_R8G8_TYPELESS,
+	DXGI_FORMAT_R8G8_UNORM,
+	DXGI_FORMAT_R8G8_UINT,
+	DXGI_FORMAT_R8G8_SNORM,
+	DXGI_FORMAT_R8G8_SINT,
+	DXGI_FORMAT_R16_TYPELESS,
+	DXGI_FORMAT_R16_FLOAT,
 	DXGI_FORMAT_D16_UNORM,
+	DXGI_FORMAT_R16_UNORM,
+	DXGI_FORMAT_R16_UINT,
+	DXGI_FORMAT_R16_SNORM,
+	DXGI_FORMAT_R16_SINT,
+	DXGI_FORMAT_R8_TYPELESS,
+	DXGI_FORMAT_R8_UNORM,
+	DXGI_FORMAT_R8_UINT,
+	DXGI_FORMAT_R8_SNORM,
+	DXGI_FORMAT_R8_SINT,
+	DXGI_FORMAT_A8_UNORM,
+	DXGI_FORMAT_R1_UNORM,
+	DXGI_FORMAT_R9G9B9E5_SHAREDEXP,
+	DXGI_FORMAT_R8G8_B8G8_UNORM,
+	DXGI_FORMAT_G8R8_G8B8_UNORM,
+	DXGI_FORMAT_BC1_TYPELESS,
+	DXGI_FORMAT_BC1_UNORM,
+	DXGI_FORMAT_BC1_UNORM_SRGB,
+	DXGI_FORMAT_BC2_TYPELESS,
+	DXGI_FORMAT_BC2_UNORM,
+	DXGI_FORMAT_BC2_UNORM_SRGB,
+	DXGI_FORMAT_BC3_TYPELESS,
+	DXGI_FORMAT_BC3_UNORM,
+	DXGI_FORMAT_BC3_UNORM_SRGB,
+	DXGI_FORMAT_BC4_TYPELESS,
+	DXGI_FORMAT_BC4_UNORM,
+	DXGI_FORMAT_BC4_SNORM,
+	DXGI_FORMAT_BC5_TYPELESS,
+	DXGI_FORMAT_BC5_UNORM,
+	DXGI_FORMAT_BC5_SNORM,
+	DXGI_FORMAT_B5G6R5_UNORM,
+	DXGI_FORMAT_B5G5R5A1_UNORM,
+	DXGI_FORMAT_B8G8R8A8_UNORM,
+	DXGI_FORMAT_B8G8R8X8_UNORM,
+	DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM,
+	DXGI_FORMAT_B8G8R8A8_TYPELESS,
+	DXGI_FORMAT_B8G8R8A8_UNORM_SRGB,
+	DXGI_FORMAT_B8G8R8X8_TYPELESS,
+	DXGI_FORMAT_B8G8R8X8_UNORM_SRGB,
+	DXGI_FORMAT_BC6H_TYPELESS,
+	DXGI_FORMAT_BC6H_UF16,
+	DXGI_FORMAT_BC6H_SF16,
+	DXGI_FORMAT_BC7_TYPELESS,
+	DXGI_FORMAT_BC7_UNORM,
+	DXGI_FORMAT_BC7_UNORM_SRGB,
+	DXGI_FORMAT_AYUV,
+	DXGI_FORMAT_Y410,
+	DXGI_FORMAT_Y416,
+	DXGI_FORMAT_NV12,
+	DXGI_FORMAT_P010,
+	DXGI_FORMAT_P016,
+	DXGI_FORMAT_420_OPAQUE,
+	DXGI_FORMAT_YUY2,
+	DXGI_FORMAT_Y210,
+	DXGI_FORMAT_Y216,
+	DXGI_FORMAT_NV11,
+	DXGI_FORMAT_AI44,
+	DXGI_FORMAT_IA44,
+	DXGI_FORMAT_P8,
+	DXGI_FORMAT_A8P8,
+	DXGI_FORMAT_B4G4R4A4_UNORM,
+
+	DXGI_FORMAT_P208,
+	DXGI_FORMAT_V208,
+	DXGI_FORMAT_V408,
+
+
+	DXGI_FORMAT_FORCE_UINT
 };
 
 struct SDescriptorHeap
@@ -967,6 +1377,13 @@ struct SBuffer
 	HeapType heapType;
 };
 
+
+struct SDepthStencil
+{
+	ComPtr<ID3D12Resource> depthStencilBuffer;
+	ComPtr<ID3D12DescriptorHeap> dsDescriptorHeap;
+};
+
 void GetHardwareAdapter(_In_ IDXGIFactory2* pFactory, _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter)
 {
 	ComPtr<IDXGIAdapter1> adapter;
@@ -1087,7 +1504,7 @@ Device CreateDevice(DeviceParams& params, HWND hwnd)
 	}
 
 	ThrowIfFailed(device->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, device->commandAllocators[device->frameIndex]->commandAllocator.Get(), nullptr, IID_PPV_ARGS(&device->mainContext->commandList)));
-	device->backBufferRenderPass = CreateRenderPass(device, IMAGE_FORMAT_R8G8B8A8_UNORM, IMAGE_FORMAT_UNKNOWN, FINAL_PRESENT);
+	device->backBufferRenderPass = CreateRenderPass(device, IMAGE_FORMAT_R8G8B8A8_UNORM, IMAGE_FORMAT_D32_FLOAT, FINAL_PRESENT);
 	device->backBufferRenderSetup = CreateRenderSetup(device);
 
 	{
@@ -1283,6 +1700,13 @@ Pipeline CreateGraphicsPipeline(SDevice* device, PipelineParams& params)
 		offsets[stream] += dxgi_format_size[format];
 	}
 
+	CD3DX12_BLEND_DESC blendDesc(D3D12_DEFAULT);
+
+
+	CD3DX12_DEPTH_STENCIL_DESC depthStencilDesc(D3D12_DEFAULT);
+	//depthStencilDesc.DepthEnable = FALSE;
+	//depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = params.rootSignature->rootSignature.Get();
 	psoDesc.InputLayout = { inputElementDesc, params.attributeCount };
@@ -1294,15 +1718,16 @@ Pipeline CreateGraphicsPipeline(SDevice* device, PipelineParams& params)
 	psoDesc.RasterizerState.CullMode = (D3D12_CULL_MODE)(params.cullMode + 1);
 	psoDesc.RasterizerState.DepthClipEnable = true;
 	psoDesc.RasterizerState.MultisampleEnable = true;
-	psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = 0xF;
-	if (params.blendState)
-	{
-		psoDesc.BlendState = params.blendState->blendDesc;
-	}
-	psoDesc.DepthStencilState.DepthEnable = params.depthTest;
-	psoDesc.DepthStencilState.DepthWriteMask = params.depthWrite ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-	psoDesc.DepthStencilState.DepthFunc = (D3D12_COMPARISON_FUNC)(params.depthFunc + 1);
-
+	//psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = 0xF;
+	//if (params.blendState)
+	//{
+	//	psoDesc.BlendState = params.blendState->blendDesc;
+	//}
+	psoDesc.BlendState = blendDesc;
+	//psoDesc.DepthStencilState.DepthEnable = params.depthTest;
+	//psoDesc.DepthStencilState.DepthWriteMask = params.depthWrite ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+	//psoDesc.DepthStencilState.DepthFunc = (D3D12_COMPARISON_FUNC)(params.depthFunc + 1);
+	psoDesc.DepthStencilState = depthStencilDesc;
 	const UINT32 renderTargetCount = params.renderPass->colorTargetCount;
 	psoDesc.NumRenderTargets = renderTargetCount;
 	memcpy(psoDesc.RTVFormats, params.renderPass->colorFormats, renderTargetCount * sizeof(DXGI_FORMAT));
@@ -1390,6 +1815,27 @@ Buffer CreateIndexBuffer(SDevice* device, const void* pData, UINT size)
 	return indexBuffer;
 }
 
+Buffer CreateDepthStencilBuffer(SDevice* device, UINT width, UINT height)
+{
+	Buffer result = new SBuffer();
+
+	D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
+	depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
+	depthOptimizedClearValue.DepthStencil.Stencil = 0;
+
+	ThrowIfFailed(device->device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&depthOptimizedClearValue,
+		IID_PPV_ARGS(&result->buffer)
+	));
+
+	return result;
+}
+
 DescriptorHeap CreateConstantBuffer(SDevice* device, const void* pData, UINT count, UINT size)
 {
 	DescriptorHeap result = new SDescriptorHeap();
@@ -1408,6 +1854,22 @@ DescriptorHeap CreateConstantBuffer(SDevice* device, const void* pData, UINT cou
 	ThrowIfFailed(constantBuffer->buffer->Map(0, &readRange, reinterpret_cast<void**>(&result->m_pData)));
 	memcpy(result->m_pData, &pData, size);
 	return result;
+}
+
+DescriptorHeap CreateDepthStencilDescriptorBuffer(SDevice* device, SBuffer* depthStencilBuffer)
+{
+	DescriptorHeap result = new SDescriptorHeap();
+	result->Init(device->device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
+
+	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
+	depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+	device->device->CreateDepthStencilView(depthStencilBuffer->buffer.Get(), &depthStencilDesc, result->GetCPUHandle(0));
+
+	return result;
+
 }
 
 void WaitForGPU(SDevice* device)
@@ -1464,7 +1926,7 @@ void Reset(SDevice* device, SPipeline* pipeline)
 	ThrowIfFailed(device->mainContext->commandList->Reset(device->commandAllocators[device->frameIndex]->commandAllocator.Get(), pipeline->pipeline.Get()));
 }
 
-void BeginRenderPass(SDevice* device, const DeviceParams& params, const float* clearColor)
+void BeginRenderPass(SDevice* device, const DeviceParams& params, SDepthStencil* depthStencil, const float* clearColor)
 {
 	D3D12_VIEWPORT vp = { 0.0f, 0.0f, static_cast<float>(params.width), static_cast<float>(params.height) };
 	D3D12_RECT sr = { 0, 0, static_cast<LONG>(params.width), static_cast<LONG>(params.height) };
@@ -1473,8 +1935,20 @@ void BeginRenderPass(SDevice* device, const DeviceParams& params, const float* c
 	device->mainContext->commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(device->backBufferRenderSetup->renderTargets[device->frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(device->rtvHeap->GetCPUHandle(device->frameIndex));
-	device->mainContext->commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
-	device->mainContext->commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+	if (depthStencil == nullptr)
+	{
+		device->mainContext->commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+		device->mainContext->commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+	}
+	else
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(depthStencil->dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+		device->mainContext->commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+		device->mainContext->commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+		device->mainContext->commandList->ClearDepthStencilView(depthStencil->dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	}
+	
 }
 
 void SetGraphicsRootSignature(SDevice* device, SRootSignature* rootSignature)
@@ -1517,9 +1991,9 @@ void DrawIndexed(SDevice* device, UINT start, UINT count)
 	device->mainContext->commandList->DrawIndexedInstanced(count, 1, start, 0, 0);
 }
 
-void DrawIndexInstanced(SDevice* device, UINT start, UINT count, UINT startInstance, UINT instanceCount)
+void DrawIndexInstanced(SDevice* device, UINT StartIndexLocation, UINT IndexCountPerInstance, UINT StartInstanceLocation, UINT InstanceCount)
 {
-	device->mainContext->commandList->DrawIndexedInstanced(count, instanceCount, start, 0, startInstance);
+	device->mainContext->commandList->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, 0, StartInstanceLocation);
 }
 
 void EndRenderPass(SDevice* device)
@@ -1553,4 +2027,40 @@ RenderPass GetRenderPass(SDevice* device)
 void Destory(SDevice* device)
 {
 	CloseHandle(device->fenceEvent);
+}
+
+
+DepthStencil CreateDepthStencil(SDevice* device, UINT width, UINT height)
+{
+	DepthStencil depthStencil = new SDepthStencil();
+
+	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+	dsvHeapDesc.NumDescriptors = 1;
+	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	ThrowIfFailed(device->device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&depthStencil->dsDescriptorHeap)));
+
+	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
+	depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+	D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
+	depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
+	depthOptimizedClearValue.DepthStencil.Stencil = 0;
+
+	device->device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&depthOptimizedClearValue,
+		IID_PPV_ARGS(&depthStencil->depthStencilBuffer)
+	);
+	depthStencil->dsDescriptorHeap->SetName(L"Depth/Stencil Resource Heap");
+
+	device->device->CreateDepthStencilView(depthStencil->depthStencilBuffer.Get(), &depthStencilDesc, depthStencil->dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	
+	return depthStencil;
 }

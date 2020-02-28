@@ -149,7 +149,6 @@
     <ClCompile Include="BaseApp.cpp" />
     <ClCompile Include="DirectX12Renderer.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Primitives.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shader.hlsl">

@@ -24,7 +24,8 @@ struct PSInput
 PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
 {
     PSInput result;
-    result.position = mul(mul(position, g_mRotateWithY), g_mWorldViewProj);
+    result.position = position;
+    //result.position = mul(mul(position, g_mRotateWithY), g_mWorldViewProj);
     result.color = color;
 
     return result;
