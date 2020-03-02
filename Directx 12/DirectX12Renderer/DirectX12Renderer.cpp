@@ -221,21 +221,6 @@ inline bool operator!=(const D3D12_HEAP_PROPERTIES& l, const D3D12_HEAP_PROPERTI
 	return !(l == r);
 }
 
-struct CD3DX12_RANGE : public D3D12_RANGE
-{
-	CD3DX12_RANGE() = default;
-	explicit CD3DX12_RANGE(const D3D12_RANGE& o) :
-		D3D12_RANGE(o)
-	{}
-	CD3DX12_RANGE(
-		SIZE_T begin,
-		SIZE_T end)
-	{
-		Begin = begin;
-		End = end;
-	}
-};
-
 struct CD3DX12_TEXTURE_COPY_LOCATION : public D3D12_TEXTURE_COPY_LOCATION
 {
 	CD3DX12_TEXTURE_COPY_LOCATION() = default;
@@ -260,6 +245,68 @@ struct CD3DX12_TEXTURE_COPY_LOCATION : public D3D12_TEXTURE_COPY_LOCATION
 		Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		PlacedFootprint = {};
 		SubresourceIndex = Sub;
+	}
+};
+
+struct CD3DX12_RANGE : public D3D12_RANGE
+{
+	CD3DX12_RANGE() = default;
+	explicit CD3DX12_RANGE(const D3D12_RANGE& o) :
+		D3D12_RANGE(o)
+	{}
+	CD3DX12_RANGE(
+		SIZE_T begin,
+		SIZE_T end)
+	{
+		Begin = begin;
+		End = end;
+	}
+};
+
+struct CD3DX12_RASTERIZER_DESC : public D3D12_RASTERIZER_DESC
+{
+	CD3DX12_RASTERIZER_DESC() = default;
+	explicit CD3DX12_RASTERIZER_DESC(const D3D12_RASTERIZER_DESC& o) :
+		D3D12_RASTERIZER_DESC(o)
+	{}
+	explicit CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT)
+	{
+		FillMode = D3D12_FILL_MODE_SOLID;
+		CullMode = D3D12_CULL_MODE_BACK;
+		FrontCounterClockwise = FALSE;
+		DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+		DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+		SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+		DepthClipEnable = TRUE;
+		MultisampleEnable = FALSE;
+		AntialiasedLineEnable = FALSE;
+		ForcedSampleCount = 0;
+		ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+	}
+	explicit CD3DX12_RASTERIZER_DESC(
+		D3D12_FILL_MODE fillMode,
+		D3D12_CULL_MODE cullMode,
+		BOOL frontCounterClockwise,
+		INT depthBias,
+		FLOAT depthBiasClamp,
+		FLOAT slopeScaledDepthBias,
+		BOOL depthClipEnable,
+		BOOL multisampleEnable,
+		BOOL antialiasedLineEnable,
+		UINT forcedSampleCount,
+		D3D12_CONSERVATIVE_RASTERIZATION_MODE conservativeRaster)
+	{
+		FillMode = fillMode;
+		CullMode = cullMode;
+		FrontCounterClockwise = frontCounterClockwise;
+		DepthBias = depthBias;
+		DepthBiasClamp = depthBiasClamp;
+		SlopeScaledDepthBias = slopeScaledDepthBias;
+		DepthClipEnable = depthClipEnable;
+		MultisampleEnable = multisampleEnable;
+		AntialiasedLineEnable = antialiasedLineEnable;
+		ForcedSampleCount = forcedSampleCount;
+		ConservativeRaster = conservativeRaster;
 	}
 };
 
@@ -1377,7 +1424,6 @@ struct SBuffer
 	HeapType heapType;
 };
 
-
 struct SDepthStencil
 {
 	ComPtr<ID3D12Resource> depthStencilBuffer;
@@ -1928,7 +1974,7 @@ void Reset(SDevice* device, SPipeline* pipeline)
 
 void BeginRenderPass(SDevice* device, const DeviceParams& params, SDepthStencil* depthStencil, const float* clearColor)
 {
-	D3D12_VIEWPORT vp = { 0.0f, 0.0f, static_cast<float>(params.width), static_cast<float>(params.height) };
+	D3D12_VIEWPORT vp = { 0.0f, 0.0f, static_cast<float>(params.width), static_cast<float>(params.height), 0.0f, 1.0f };
 	D3D12_RECT sr = { 0, 0, static_cast<LONG>(params.width), static_cast<LONG>(params.height) };
 	device->mainContext->commandList->RSSetViewports(1, &vp);
 	device->mainContext->commandList->RSSetScissorRects(1, &sr);

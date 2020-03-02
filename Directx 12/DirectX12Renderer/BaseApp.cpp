@@ -73,6 +73,7 @@ void BaseApp::OnInit()
 
         8, 9, 10,
         8, 11, 9,
+
         //0, 2, 3,
 
         //4, 5, 6,
@@ -121,12 +122,6 @@ void BaseApp::OnUpdate()
     //UpdateBuffer(m_constantBufferDesc, &constantBuffer, sizeof(constantBuffer));
 }
 
-void BaseApp::OnDestroy()
-{
-    WaitForGPU(m_device);
-    Destory(m_device);
-}
-
 void BaseApp::OnRender()
 {
     PopulateCommand();
@@ -137,6 +132,9 @@ void BaseApp::OnRender()
 
 void BaseApp::PopulateCommand()
 {
+
+    //WaitForPreviousFrame();
+
     Reset(m_device, m_pipeline1);
 
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
@@ -152,6 +150,7 @@ void BaseApp::PopulateCommand()
         //DrawIndexed(m_device, 6, 3);
         DrawIndexInstanced(m_device, 18, 6, 1, 8);
         DrawIndexInstanced(m_device, 12, 6, 1, 4);
+        DrawIndexInstanced(m_device, 18, 6, 1, 8);
 
         /*DrawIndexed(m_device, 18, 3);
         DrawIndexed(m_device, 21, 3);
@@ -164,6 +163,13 @@ void BaseApp::PopulateCommand()
     EndRenderPass(m_device);
 
 }
+
+void BaseApp::OnDestroy()
+{
+    WaitForGPU(m_device);
+    Destory(m_device);
+}
+
 
 _Use_decl_annotations_
 void BaseApp::ParseCommandLineArgs(WCHAR* argv[], int argc)

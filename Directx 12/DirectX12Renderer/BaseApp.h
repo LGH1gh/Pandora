@@ -2,8 +2,6 @@
 
 #include "Renderer.h"
 
-using namespace DirectX;
-
 struct Vertex
 {
 	XMFLOAT4 pos;
