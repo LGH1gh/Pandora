@@ -1,5 +1,7 @@
 #pragma once
 
+#include <wincodec.h>
+
 enum ImageFormat
 {
 	IMAGE_FORMAT_UNKNOWN,
@@ -126,3 +128,4 @@ enum ImageFormat
 
 	IMAGE_FORMAT_FORCE_UINT
 };
+

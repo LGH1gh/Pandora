@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="stdafx.h">
+      <Filter>Head Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12Render.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DXBase.cpp">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32Application.cpp">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="GraphicsConstantBuffer.h">
+      <Filter>Head Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="D3D12Render.h">
+      <Filter>Head Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneConstantBuffer.h">
+      <Filter>Head Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vertices.h">
+      <Filter>Head Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConstantBuffer.h">
+      <Filter>Head Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="d3dx12.h">
+      <Filter>Head Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="DXBase.h">
+      <Filter>Head Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="DXBaseHelper.h">
+      <Filter>Head Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Geometry.h">
+      <Filter>Head Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32Application.h">
+      <Filter>Head Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="ComputeConstantBuffer.h">
+      <Filter>Head Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Head Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="StepTimer.h">
+      <Filter>Head Files\utils</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\x64\Debug\Shader.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Head Files">
+      <UniqueIdentifier>{989ce098-e2d2-4d5d-9b0e-3b50fa4912f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{08f83a52-3beb-4bd1-be28-f828dc8ded3c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Head Files\utils">
+      <UniqueIdentifier>{7fcebd0e-0566-4e99-8c27-c614ce1e79d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\utils">
+      <UniqueIdentifier>{2e5761d1-6a96-45b4-be71-56fb27f81db2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -1,7 +1,7 @@
 #pragma once
 #include "Math.h"
 #include "RendererHelper.h"
-#include "ImageTools.h"
+#include "Image.h"
 
 static const int FrameCount = 2;
 
@@ -21,6 +21,7 @@ typedef struct SSamplerTable* SamplerTable;
 typedef struct SRenderSetup* RenderSetup;
 typedef struct SBlob* Blob;
 typedef struct SDepthStencil* DepthStencil;
+typedef struct STexture* Texture;
 
 typedef
 enum ResourceState
@@ -290,7 +291,7 @@ inline ResourceState operator | (ResourceState a, ResourceState b) {
 
 Device CreateDevice(DeviceParams& params, HWND hwnd);
 RenderSetup CreateRenderSetup(Device device);
-RootSignature CreateRootSignature(SDevice* device, UINT countantBufferNum);
+RootSignature CreateRootSignature(SDevice* device, UINT countantBufferNum, UINT shaderResouceViewCount);
 Blob CreateShaderFromFile(ShaderType shaderType, LPCWSTR filePath, std::string entryPoint, UINT flags);
 RenderPass CreateRenderPass(Device device, ImageFormat colorFormat, ImageFormat depthFormat, RenderPassFlags flags, UINT msaaSampler = 1);
 Pipeline CreateGraphicsPipeline(SDevice* device, PipelineParams& params);
@@ -298,9 +299,7 @@ Buffer CreateBuffer(Device device, const BufferParams& params);
 Buffer CreateVertexBuffer(SDevice* device, const void* pData, UINT size);
 Buffer CreateIndexBuffer(SDevice* device, const void* pData, UINT size);
 DescriptorHeap CreateConstantBuffer(SDevice* device, const void* pData, UINT count, UINT size);
-Buffer CreateDepthStencilBuffer(SDevice* device, UINT width, UINT height);
-DescriptorHeap CreateDepthStencilDescriptorBuffer(SDevice* device, SBuffer* depthStencilBuffer);
-
+DepthStencil CreateDepthStencil(SDevice* device, UINT width, UINT height);
 VertexSetup CreateVertexSetup(SBuffer* vertexBuffer, UINT vertexBufferStride, SBuffer* indexBuffer, UINT indexBufferStride);
 BlendState CreateBlendState(Blend src, Blend dst, BlendOperator mode, UINT mask, bool alphaToCoverageEnable);
 
@@ -314,6 +313,7 @@ void Reset(SDevice* device, SPipeline* pipeline);
 
 void BeginRenderPass(SDevice* device, const DeviceParams& params, SDepthStencil* depthStencil = nullptr, const float* clearColor = nullptr);
 void SetConstantBuffer(SDevice* device, SDescriptorHeap* descriptor);
+void SetTextureBuffer(SDevice* device, SDescriptorHeap* descriptor);
 void SetPipeline(SDevice* device, SPipeline* pipeline);
 void SetGraphicsRootSignature(SDevice* device, SRootSignature* rootSignature);
 void SetVertexSetup(SDevice* device, SVertexSetup* vertexSetup);
@@ -329,5 +329,4 @@ Context GetContext(SDevice* device);
 RenderPass GetRenderPass(SDevice* device);
 
 void Destory(SDevice* device);
-
-DepthStencil CreateDepthStencil(SDevice* device, UINT width, UINT height);
+DescriptorHeap CreateTexture(SDevice* device);

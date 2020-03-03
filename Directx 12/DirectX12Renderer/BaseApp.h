@@ -4,8 +4,13 @@
 
 struct Vertex
 {
-	XMFLOAT4 pos;
-	XMFLOAT4 color;
+	XMFLOAT3 pos;
+	//XMFLOAT4 color;
+	XMFLOAT2 texCoord;
+	Vertex(float x, float y, float z, float u, float v) :
+		pos(x, y, z),
+		texCoord(u, v)
+	{}
 };
 
 struct ConstantBuffer
@@ -76,6 +81,8 @@ protected:
 	ConstantBuffer m_constantBufferData;
 	DescriptorHeap m_constantBufferDesc;
 	DepthStencil m_depthStencil;
+	DescriptorHeap m_texture;
+
 
 	BlendState m_blendState;
 

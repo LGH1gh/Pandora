@@ -1,22 +1,17 @@
 #pragma once
 
 #ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
+#define WIN32_LEAN_AND_MEAN    // Exclude rarely-used stuff from Windows headers.
 #endif
 
 #include <windows.h>
-
-#include "d3dx12.h"
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
-#include <pix.h>
-
-
+#include "d3dx12.h"
 #include <string>
-#include <wrl.h>
-#include <shellapi.h>
+#include <wincodec.h>
 
 #pragma comment ( lib, "d3d12.lib")
 #pragma comment ( lib, "dxgi.lib")
@@ -25,6 +20,8 @@
 
 // this will only call release if an object exists (prevents exceptions calling release on non existant objects)
 #define SAFE_RELEASE(p) { if ( (p) ) { (p)->Release(); (p) = 0; } }
+
+using namespace DirectX; // we will be using the directxmath library
 
 // Handle to the window
 HWND hwnd = NULL;
@@ -118,3 +115,54 @@ D3D12_INDEX_BUFFER_VIEW indexBufferView; // a structure holding information abou
 
 ID3D12Resource* depthStencilBuffer; // This is the memory for our depth buffer. it will also be used for a stencil buffer in a later tutorial
 ID3D12DescriptorHeap* dsDescriptorHeap; // This is a heap for our depth/stencil buffer descriptor
+
+// this is the structure of our constant buffer.
+struct ConstantBufferPerObject {
+    XMFLOAT4X4 wvpMat;
+};
+
+// Constant buffers must be 256-byte aligned which has to do with constant reads on the GPU.
+// We are only able to read at 256 byte intervals from the start of a resource heap, so we will
+// make sure that we add padding between the two constant buffers in the heap (one for cube1 and one for cube2)
+// Another way to do this would be to add a float array in the constant buffer structure for padding. In this case
+// we would need to add a float padding[50]; after the wvpMat variable. This would align our structure to 256 bytes (4 bytes per float)
+// The reason i didn't go with this way, was because there would actually be wasted cpu cycles when memcpy our constant
+// buffer data to the gpu virtual address. currently we memcpy the size of our structure, which is 16 bytes here, but if we
+// were to add the padding array, we would memcpy 64 bytes if we memcpy the size of our structure, which is 50 wasted bytes
+// being copied.
+int ConstantBufferPerObjectAlignedSize = (sizeof(ConstantBufferPerObject) + 255) & ~255;
+
+ConstantBufferPerObject cbPerObject; // this is the constant buffer data we will send to the gpu 
+                                        // (which will be placed in the resource we created above)
+
+ID3D12Resource* constantBufferUploadHeaps[frameBufferCount]; // this is the memory on the gpu where constant buffers for each frame will be placed
+
+UINT8* cbvGPUAddress[frameBufferCount]; // this is a pointer to each of the constant buffer resource heaps
+
+XMFLOAT4X4 cameraProjMat; // this will store our projection matrix
+XMFLOAT4X4 cameraViewMat; // this will store our view matrix
+
+XMFLOAT4 cameraPosition; // this is our cameras position vector
+XMFLOAT4 cameraTarget; // a vector describing the point in space our camera is looking at
+XMFLOAT4 cameraUp; // the worlds up vector
+
+XMFLOAT4X4 cube1WorldMat; // our first cubes world matrix (transformation matrix)
+XMFLOAT4X4 cube1RotMat; // this will keep track of our rotation for the first cube
+XMFLOAT4 cube1Position; // our first cubes position in space
+
+XMFLOAT4X4 cube2WorldMat; // our first cubes world matrix (transformation matrix)
+XMFLOAT4X4 cube2RotMat; // this will keep track of our rotation for the second cube
+XMFLOAT4 cube2PositionOffset; // our second cube will rotate around the first cube, so this is the position offset from the first cube
+
+int numCubeIndices; // the number of indices to draw the cube
+
+ID3D12Resource* textureBuffer; // the resource heap containing our texture
+
+int LoadImageDataFromFile(BYTE** imageData, D3D12_RESOURCE_DESC& resourceDescription, LPCWSTR filename, int& bytesPerRow);
+
+DXGI_FORMAT GetDXGIFormatFromWICFormat(WICPixelFormatGUID& wicFormatGUID);
+WICPixelFormatGUID GetConvertToWICFormat(WICPixelFormatGUID& wicFormatGUID);
+int GetDXGIFormatBitsPerPixel(DXGI_FORMAT& dxgiFormat);
+
+ID3D12DescriptorHeap* mainDescriptorHeap;
+ID3D12Resource* textureBufferUploadHeap;

@@ -147,11 +147,6 @@
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="Shader.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="VertexShader.hlsl">
       <FileType>Document</FileType>
     </None>

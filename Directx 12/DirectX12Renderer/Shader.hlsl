@@ -9,34 +9,38 @@
 //
 //*********************************************************
 
-cbuffer ConstantBuffer : register(b0)
+cbuffer constantbuffer : register(b0)
 {
     row_major float4x4 g_mWorldViewProj;
     row_major float4x4 g_mRotateWithY;
 }
 
+Texture2D t1 : register(t0);
+SamplerState s1 : register(s0);
+
 struct PSInput
 {
     float4 position : SV_POSITION;
-    float4 color : COLOR;
+    float2 texCoord : TEXCOORD;
 };
 
-PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
+PSInput VSMain(float4 position : POSITION, float2 texCoord : TEXCOORD)
 {
     PSInput result;
-    result.position = position;
-    //result.position = mul(mul(position, g_mRotateWithY), g_mWorldViewProj);
-    result.color = color;
+    //result.position = position;
+    //result.position = mul(position, g_mWorldViewProj);
+    result.position = mul(mul(position, g_mRotateWithY), g_mWorldViewProj);
+    result.texCoord = texCoord;
 
     return result;
 }
 
-float4 PSMain1(PSInput input) : SV_TARGET
+float4 PSMain(PSInput input) : SV_TARGET
 {
-    return input.color;
+    return t1.Sample(s1, input.texCoord);
 }
 
-float4 PSMain2(PSInput input) : SV_TARGET
-{
-    return float4(1.0, 0.0, 0.0, 1.0);
-}
+//float4 PSMain(PSInput input) : SV_TARGET
+//{
+//    return float4(1.0, 0.0, 0.0, 1.0);
+//}
