@@ -963,6 +963,107 @@ struct XD3D12_ROOT_SIGNATURE_DESC : public D3D12_ROOT_SIGNATURE_DESC
 	}
 };
 
+struct XD3D12_STATIC_SAMPLER_DESC : D3D12_STATIC_SAMPLER_DESC
+{
+	XD3D12_STATIC_SAMPLER_DESC() = default;
+	explicit XD3D12_STATIC_SAMPLER_DESC(const D3D12_STATIC_SAMPLER_DESC& o) :
+		D3D12_STATIC_SAMPLER_DESC(o)
+	{}
+	XD3D12_STATIC_SAMPLER_DESC(
+		D3D12_FILTER filter,
+		D3D12_TEXTURE_ADDRESS_MODE addressU,
+		D3D12_TEXTURE_ADDRESS_MODE addressV,
+		D3D12_TEXTURE_ADDRESS_MODE addressW,
+		FLOAT mipLODBias,
+		UINT maxAnisotropy,
+		D3D12_COMPARISON_FUNC comparisonFunc,
+		D3D12_STATIC_BORDER_COLOR borderColor,
+		FLOAT minLOD,
+		FLOAT maxLOD,
+		UINT shaderRegister,
+		UINT registerSpace,
+		D3D12_SHADER_VISIBILITY shaderVisibility)
+	{
+		Init(filter, addressU, addressV, addressW, mipLODBias, maxAnisotropy, comparisonFunc, borderColor, 
+			minLOD, maxLOD, shaderRegister, registerSpace, shaderVisibility);
+	}
+	XD3D12_STATIC_SAMPLER_DESC(XD3D12_DEFAULT)
+	{
+		Init(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0, 0, D3D12_COMPARISON_FUNC_NEVER, D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK, 0.0f, D3D12_FLOAT32_MAX, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+	}
+
+	inline void Init(
+		D3D12_FILTER filter,
+		D3D12_TEXTURE_ADDRESS_MODE addressU,
+		D3D12_TEXTURE_ADDRESS_MODE addressV,
+		D3D12_TEXTURE_ADDRESS_MODE addressW,
+		FLOAT mipLODBias,
+		UINT maxAnisotropy,
+		D3D12_COMPARISON_FUNC comparisonFunc,
+		D3D12_STATIC_BORDER_COLOR borderColor,
+		FLOAT minLOD,
+		FLOAT maxLOD,
+		UINT shaderRegister,
+		UINT registerSpace,
+		D3D12_SHADER_VISIBILITY shaderVisibility)
+	{
+		Init(*this, filter, addressU, addressV, addressW, mipLODBias, maxAnisotropy, comparisonFunc, borderColor,
+			minLOD, maxLOD, shaderRegister, registerSpace, shaderVisibility);
+	}
+
+	static inline void Init(
+		D3D12_STATIC_SAMPLER_DESC& desc,
+		D3D12_FILTER filter,
+		D3D12_TEXTURE_ADDRESS_MODE addressU,
+		D3D12_TEXTURE_ADDRESS_MODE addressV,
+		D3D12_TEXTURE_ADDRESS_MODE addressW,
+		FLOAT mipLODBias,
+		UINT maxAnisotropy,
+		D3D12_COMPARISON_FUNC comparisonFunc,
+		D3D12_STATIC_BORDER_COLOR borderColor,
+		FLOAT minLOD,
+		FLOAT maxLOD,
+		UINT shaderRegister,
+		UINT registerSpace,
+		D3D12_SHADER_VISIBILITY shaderVisibility)
+	{
+		desc.Filter = filter;
+		desc.AddressU = addressU;
+		desc.AddressV = addressV;
+		desc.AddressW = addressW;
+		desc.MipLODBias = mipLODBias;
+		desc.MaxAnisotropy = maxAnisotropy;
+		desc.ComparisonFunc = comparisonFunc;
+		desc.BorderColor = borderColor;
+		desc.MinLOD = minLOD;
+		desc.MaxLOD = maxLOD;
+		desc.ShaderRegister = shaderRegister;
+		desc.ShaderVisibility = shaderVisibility;
+	}
+};
+
+struct XD3D12_SHADER_BYTECODE : public D3D12_SHADER_BYTECODE
+{
+	XD3D12_SHADER_BYTECODE() = default;
+	explicit XD3D12_SHADER_BYTECODE(const D3D12_SHADER_BYTECODE& o) :
+		D3D12_SHADER_BYTECODE(o)
+	{}
+	XD3D12_SHADER_BYTECODE(
+		_In_ ID3DBlob* pShaderBlob)
+	{
+		pShaderBytecode = pShaderBlob->GetBufferPointer();
+		BytecodeLength = pShaderBlob->GetBufferSize();
+	}
+	XD3D12_SHADER_BYTECODE(
+		const void* _pShaderBytecode,
+		SIZE_T bytecodeLength)
+	{
+		pShaderBytecode = _pShaderBytecode;
+		BytecodeLength = bytecodeLength;
+	}
+};
+
 struct XD3D12_TEXTURE_COPY_LOCATION : public D3D12_TEXTURE_COPY_LOCATION
 {
 	XD3D12_TEXTURE_COPY_LOCATION() = default;

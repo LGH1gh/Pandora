@@ -33,10 +33,10 @@
     <ClInclude Include="Math.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
-    <ClInclude Include="Image.h">
+    <ClInclude Include="DirectX12RenderHelper.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
-    <ClInclude Include="DirectX12RenderHelper.h">
+    <ClInclude Include="RendererStruct.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
   </ItemGroup>
@@ -49,6 +49,9 @@
     </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer.cpp">
+      <Filter>源文件\utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

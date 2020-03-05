@@ -4,13 +4,8 @@
 
 struct Vertex
 {
-	XMFLOAT3 pos;
-	//XMFLOAT4 color;
-	XMFLOAT2 texCoord;
-	Vertex(float x, float y, float z, float u, float v) :
-		pos(x, y, z),
-		texCoord(u, v)
-	{}
+	XMFLOAT4 pos;
+	XMFLOAT4 color;
 };
 
 struct ConstantBuffer
@@ -52,8 +47,8 @@ public:
 	BaseApp(UINT width, UINT height, std::wstring title);
 	virtual ~BaseApp();
 
-	UINT GetWidth() const { return m_deviceParams.width; }
-	UINT GetHeight() const { return m_deviceParams.height; }
+	UINT GetWidth() const { return m_width; }
+	UINT GetHeight() const { return m_height; }
 	const WCHAR* GetTitle() const { return m_title.c_str(); }
 
 	virtual void OnInit();
@@ -64,28 +59,17 @@ public:
 	virtual void OnKeyUp(UINT8 wParam) {}
 	virtual void OnKeyDown(UINT8 wParam) {}
 
-	void ParseCommandLineArgs(WCHAR* argv[], int argc);
 	void SetWindow(HWND hwnd) { m_hwnd = hwnd; }
 	HWND GetWindow() { return m_hwnd; }
 
 protected:
 	void PopulateCommand();
-
-	Device m_device;
-	DeviceParams m_deviceParams;
+	Kernel m_kernel;
 	RootSignature m_rootSignature;
-	Pipeline m_pipeline1, m_pipeline2;
+	Pipeline m_pipeline;
 	VertexSetup m_vertexSetup;
 
-	Coordinate m_coordinate;
-	ConstantBuffer m_constantBufferData;
-	DescriptorHeap m_constantBufferDesc;
-	DepthStencil m_depthStencil;
-	DescriptorHeap m_texture;
-
-
-	BlendState m_blendState;
-
+	UINT m_width, m_height;
 	std::wstring m_title;
 	HWND m_hwnd;
 };

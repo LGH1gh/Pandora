@@ -141,15 +141,16 @@
   <ItemGroup>
     <ClInclude Include="BaseApp.h" />
     <ClInclude Include="DirectX12RenderHelper.h" />
-    <ClInclude Include="Image.h" />
     <ClInclude Include="Math.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RendererHelper.h" />
+    <ClInclude Include="RendererStruct.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BaseApp.cpp" />
     <ClCompile Include="DirectX12Renderer.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shader.hlsl">

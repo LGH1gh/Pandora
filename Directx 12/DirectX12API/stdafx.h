@@ -156,7 +156,6 @@ XMFLOAT4 cube2PositionOffset; // our second cube will rotate around the first cu
 
 int numCubeIndices; // the number of indices to draw the cube
 
-ID3D12Resource* textureBuffer; // the resource heap containing our texture
 
 int LoadImageDataFromFile(BYTE** imageData, D3D12_RESOURCE_DESC& resourceDescription, LPCWSTR filename, int& bytesPerRow);
 
@@ -165,4 +164,5 @@ WICPixelFormatGUID GetConvertToWICFormat(WICPixelFormatGUID& wicFormatGUID);
 int GetDXGIFormatBitsPerPixel(DXGI_FORMAT& dxgiFormat);
 
 ID3D12DescriptorHeap* mainDescriptorHeap;
+ID3D12Resource* textureBuffer; // the resource heap containing our texture
 ID3D12Resource* textureBufferUploadHeap;

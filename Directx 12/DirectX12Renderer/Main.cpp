@@ -1,6 +1,6 @@
 #include "BaseApp.h"
 
-extern BaseApp* app = new BaseApp(720, 720, L"Renderer");
+extern BaseApp* app = new BaseApp(1080, 720, L"Renderer");
 
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -49,7 +49,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
     int argc;
     LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    app->ParseCommandLineArgs(argv, argc);
     LocalFree(argv);
 
     WNDCLASSEX windowClass = { 0 };
