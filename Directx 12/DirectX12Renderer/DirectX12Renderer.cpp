@@ -2,221 +2,6 @@
 #include "Renderer.h"
 #include "DirectX12RenderHelper.h"
 
-
-//
-//struct SBlendState
-//{
-//	D3D12_BLEND_DESC blendDesc;
-//};
-//
-//
-//struct STexture
-//{
-//	UINT width;
-//	UINT height;
-//	UINT depth;
-//	UINT slices;
-//	UINT mipLevels;
-//	TextureType m_Type;
-//	ImageFormat m_Format;
-//};
-//
-//struct SRenderPass
-//{
-//	DXGI_FORMAT depthFormat;
-//	UINT colorTargetCount;
-//	DXGI_FORMAT colorFormats[1];
-//	RenderPassFlags flags;
-//	UINT msaaSamples;
-//};
-//
-//
-//
-//struct SResourceTable
-//{
-//	UINT m_Offset;
-//	UINT m_Size;
-//};
-//
-//struct SSamplerTable
-//{
-//	UINT m_Offset;
-//	UINT m_Count;
-//};
-//
-//struct SRenderSetup
-//{
-//	ComPtr<ID3D12Resource> renderTargets[FrameCount];
-//};
-//
-
-//
-//BlendState CreateBlendState(Blend src, Blend dst, BlendOperator mode, UINT mask, bool alphaToCoverageEnable)
-//{
-//	BlendState blendState = new SBlendState();
-//	bool blendEnble = (src != BLEND_ONE || dst != BLEND_ZERO);
-//
-//	blendState->blendDesc.AlphaToCoverageEnable = alphaToCoverageEnable;
-//	blendState->blendDesc.IndependentBlendEnable = false;
-//
-//	static const D3D12_BLEND blend_factors[] =
-//	{
-//		D3D12_BLEND_ZERO,
-//		D3D12_BLEND_ONE,
-//		D3D12_BLEND_SRC_COLOR,
-//		D3D12_BLEND_INV_SRC_COLOR,
-//		D3D12_BLEND_SRC_ALPHA,
-//		D3D12_BLEND_INV_SRC_ALPHA,
-//		D3D12_BLEND_DEST_COLOR,
-//		D3D12_BLEND_INV_DEST_COLOR,
-//		D3D12_BLEND_DEST_ALPHA,
-//		D3D12_BLEND_INV_DEST_ALPHA,
-//	};
-//
-//	static const D3D12_BLEND_OP blend_modes[] =
-//	{
-//		D3D12_BLEND_OP_ADD,
-//		D3D12_BLEND_OP_SUBTRACT,
-//		D3D12_BLEND_OP_REV_SUBTRACT,
-//		D3D12_BLEND_OP_MIN,
-//		D3D12_BLEND_OP_MAX,
-//	};
-//
-//	for (int i = 0; i < 8; ++i)
-//	{
-//		blendState->blendDesc.RenderTarget[i].BlendEnable = blendEnble;
-//
-//		blendState->blendDesc.RenderTarget[i].BlendOp = blend_modes[mode];
-//		blendState->blendDesc.RenderTarget[i].BlendOpAlpha = blend_modes[mode];
-//		blendState->blendDesc.RenderTarget[i].SrcBlend = blend_factors[src];
-//		blendState->blendDesc.RenderTarget[i].SrcBlendAlpha = blend_factors[src];
-//		blendState->blendDesc.RenderTarget[i].DestBlend = blend_factors[dst];
-//		blendState->blendDesc.RenderTarget[i].DestBlendAlpha = blend_factors[dst];
-//
-//		blendState->blendDesc.RenderTarget[i].RenderTargetWriteMask = (UINT8)mask;
-//	}
-//
-//	return blendState;
-//}
-//
-//}
-//
-//DescriptorHeap CreateTexture(SDevice* device)
-//{
-//	SDescriptorHeap* result = new SDescriptorHeap();
-//	result->Init(device->device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, true);
-//
-//	ComPtr<ID3D12Resource> textureBuffer;
-//	ComPtr<ID3D12Resource> textureBufferUploadHeap;
-//
-//	D3D12_RESOURCE_DESC textureDesc;
-//	int imageBytesPerRow;
-//	BYTE* imageData;
-//
-//
-//	if (imageSize <= 0)
-//	{
-//		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-//	}
-//
-//	ThrowIfFailed(device->device->CreateCommittedResource(
-//		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-//		D3D12_HEAP_FLAG_NONE,
-//		&textureDesc,
-//		D3D12_RESOURCE_STATE_COPY_DEST,
-//		nullptr,
-//		IID_PPV_ARGS(&textureBuffer)
-//	));
-//
-//	UINT64 textureUploadBufferSize;
-//	device->device->GetCopyableFootprints(&textureDesc, 0, 1, 0, nullptr, nullptr, nullptr, &textureUploadBufferSize);
-//
-//	ThrowIfFailed(device->device->CreateCommittedResource(
-//		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-//		D3D12_HEAP_FLAG_NONE,
-//		&XD3D12_RESOURCE_DESC::Buffer(textureUploadBufferSize),
-//		D3D12_RESOURCE_STATE_GENERIC_READ,
-//		nullptr,
-//		IID_PPV_ARGS(&textureBufferUploadHeap)
-//	));
-//
-//	D3D12_SUBRESOURCE_DATA textureData = {};
-//	textureData.pData = &imageData[0];
-//	textureData.RowPitch = imageBytesPerRow;
-//	textureData.SlicePitch = imageBytesPerRow * textureDesc.Height;
-//
-//	UpdateSubresources(device->mainContext->commandList.Get(), textureBuffer.Get(), textureBufferUploadHeap.Get(), 0, 0, 1, &textureData);
-//	device->mainContext->commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(textureBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-//
-//
-//	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-//	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-//	srvDesc.Format = textureDesc.Format;
-//	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-//	srvDesc.Texture2D.MipLevels = 1;
-//	device->device->CreateShaderResourceView(textureBuffer.Get(), &srvDesc, result->GetCPUHandle(0));
-//
-//	ExecuteCommand(device);
-//	MoveToNextFrame(device);
-//
-//	delete imageData;
-//	
-//	return result;
-//}
-//
-//void UpdateBuffer(SDescriptorHeap* descriptor, void* pData, UINT size)
-//{
-//	memcpy(descriptor->m_pData, pData, size);
-//}
-//
-//void Reset(SDevice* device, SPipeline* pipeline)
-//{
-//	ThrowIfFailed(device->commandAllocators[device->frameIndex]->commandAllocator->Reset());
-//	ThrowIfFailed(device->mainContext->commandList->Reset(device->commandAllocators[device->frameIndex]->commandAllocator.Get(), pipeline->pipeline.Get()));
-//}
-//
-
-//
-
-//void SetConstantBuffer(SDevice* device, SDescriptorHeap* descriptor)
-//{
-//	/*ID3D12DescriptorHeap* ppHeaps[] = { descriptor->m_descHeap.Get() };
-//	device->mainContext->commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);*/
-//	device->mainContext->commandList->SetGraphicsRootDescriptorTable(0, descriptor->GetGPUHandle(0));
-//}
-//
-//void SetTextureBuffer(SDevice* device, SDescriptorHeap* descriptor)
-//{
-//	/*ID3D12DescriptorHeap* ppHeaps[] = { descriptor->m_descHeap.Get() };
-//	device->mainContext->commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);*/
-//	device->mainContext->commandList->SetGraphicsRootDescriptorTable(1, descriptor->GetGPUHandle(0));
-//}
-//
-//void SetDescriptorHeaps(SDevice* device, std::vector<DescriptorHeap> heaps)
-//{
-//	std::vector<ID3D12DescriptorHeap*> ppHeaps;
-//	for (UINT i = 0; i < heaps.size(); ++i)
-//	{
-//		ppHeaps.push_back(heaps[i]->m_descHeap.Get());
-//	}
-//	device->mainContext->commandList->SetDescriptorHeaps(heaps.size(), &ppHeaps[0]);
-//	//for (UINT i = 0; i < heaps.size(); ++i)
-//	//{
-//	//	device->mainContext->commandList->SetGraphicsRootDescriptorTable(i, heaps[i]->GetGPUHandle(0));
-//	//}
-//}
-//
-//void SetDescriptorHeaps(SDevice* device, DescriptorHeap heap1, DescriptorHeap heap2)
-//{
-//	ID3D12DescriptorHeap* ppHeaps2[] = { heap2->m_descHeap.Get() };
-//	device->mainContext->commandList->SetDescriptorHeaps(_countof(ppHeaps2), ppHeaps2);
-//	device->mainContext->commandList->SetGraphicsRootDescriptorTable(1, heap2->GetGPUHandle(0));
-//
-//	ID3D12DescriptorHeap* ppHeaps1[] = { heap1->m_descHeap.Get() };
-//	device->mainContext->commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
-//	device->mainContext->commandList->SetGraphicsRootDescriptorTable(0, heap1->GetGPUHandle(0));
-//}
-
 struct SDescriptorHeap
 {
 	ComPtr<ID3D12DescriptorHeap> m_descHeap;
@@ -369,26 +154,49 @@ void MoveToNextFrame(Kernel kernel)
 	kernel->m_fenceValues[kernel->m_frameIndex] = currentFenceValue + 1;
 }
 
-XD3D12_STATIC_SAMPLER_DESC Translate(StaticSampleDesc* staticSampleDesc)
+D3D12_STATIC_SAMPLER_DESC Translate(StaticSampleDesc* staticSampleDesc)
 {
-	XD3D12_STATIC_SAMPLER_DESC result(
-		(D3D12_FILTER)staticSampleDesc->Filter,
-		(D3D12_TEXTURE_ADDRESS_MODE)staticSampleDesc->AddressU,
-		(D3D12_TEXTURE_ADDRESS_MODE)staticSampleDesc->AddressV,
-		(D3D12_TEXTURE_ADDRESS_MODE)staticSampleDesc->AddressW,
-		staticSampleDesc->MipLODBias,
-		staticSampleDesc->MaxAnisotropy,
-		(D3D12_COMPARISON_FUNC)staticSampleDesc->ComparisonFunc,
-		(D3D12_STATIC_BORDER_COLOR)staticSampleDesc->BorderColor,
-		staticSampleDesc->MinLOD,
-		staticSampleDesc->MaxLOD,
-		staticSampleDesc->ShaderRegister,
-		staticSampleDesc->RegisterSpace,
-		(D3D12_SHADER_VISIBILITY)staticSampleDesc->ShaderVisibility);
+	D3D12_STATIC_SAMPLER_DESC result;
+	result.Filter = (D3D12_FILTER)staticSampleDesc->Filter,
+	result.AddressU = (D3D12_TEXTURE_ADDRESS_MODE)staticSampleDesc->AddressU,
+	result.AddressV = (D3D12_TEXTURE_ADDRESS_MODE)staticSampleDesc->AddressV,
+	result.AddressW = (D3D12_TEXTURE_ADDRESS_MODE)staticSampleDesc->AddressW,
+	result.MipLODBias = staticSampleDesc->MipLODBias,
+	result.MaxAnisotropy = staticSampleDesc->MaxAnisotropy,
+	result.ComparisonFunc = (D3D12_COMPARISON_FUNC)staticSampleDesc->ComparisonFunc,
+	result.BorderColor = (D3D12_STATIC_BORDER_COLOR)staticSampleDesc->BorderColor,
+	result.MinLOD = staticSampleDesc->MinLOD,
+	result.MaxLOD = staticSampleDesc->MaxLOD,
+	result.ShaderRegister = staticSampleDesc->ShaderRegister,
+	result.RegisterSpace = staticSampleDesc->RegisterSpace,
+	result.ShaderVisibility = (D3D12_SHADER_VISIBILITY)staticSampleDesc->ShaderVisibility;
 
 	return result;
 }
-
+D3D12_RESOURCE_DESC Translate(ResourceDesc resourceDesc)
+{
+	D3D12_RESOURCE_DESC result = {};
+	result.Width = resourceDesc.Width;
+	result.Height = resourceDesc.Height;
+	result.Dimension = (D3D12_RESOURCE_DIMENSION)resourceDesc.Dimension;
+	result.Alignment = resourceDesc.Alignment;
+	result.DepthOrArraySize = resourceDesc.DepthOrArraySize;
+	result.MipLevels = resourceDesc.MipLevels;
+	result.Format = (DXGI_FORMAT)resourceDesc.Format;
+	result.SampleDesc.Count = resourceDesc.SampleDesc.Count;
+	result.SampleDesc.Quality = resourceDesc.SampleDesc.Quality;
+	result.Layout = (D3D12_TEXTURE_LAYOUT)resourceDesc.Layout;
+	result.Flags = (D3D12_RESOURCE_FLAGS)resourceDesc.Flags;
+	return result;
+}
+D3D12_SUBRESOURCE_DATA Translate(SubresourceData subresourceData)
+{
+	D3D12_SUBRESOURCE_DATA result;
+	result.pData = subresourceData.pData;
+	result.RowPitch = subresourceData.RowPitch;
+	result.SlicePitch = subresourceData.SlicePitch;
+	return result;
+}
 
 Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd)
 {
@@ -399,7 +207,7 @@ Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd)
 	// Enable the debug layer (requires the Graphics Tools "optional feature").
 	// NOTE: Enabling the debug layer after device creation will invalidate the active device.
 	{
-		ComPtr<ID3D12Debug> debugController;
+		ID3D12Debug* debugController;
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 		{
 			debugController->EnableDebugLayer();
@@ -521,15 +329,16 @@ RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount, UINT srvCount, U
 	}
 	else
 	{
-		XD3D12_STATIC_SAMPLER_DESC samplerDesc;
+		D3D12_STATIC_SAMPLER_DESC samplerDesc;
 		samplerDesc = Translate(staticSampleDesc);
 		rootSignatureDesc.Init_1_1(index, rootParameters, 1, &samplerDesc, rootSignatureFlags);
 	}
 
 	ComPtr<ID3DBlob> signature;
 	ComPtr<ID3DBlob> error;
-	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_1, &signature, &error));
+	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
 	ThrowIfFailed(kernel->m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature->m_rootSignature)));
+
 
 	return rootSignature;
 }
@@ -609,6 +418,7 @@ Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphi
 	psoDesc.RasterizerState.MultisampleEnable = true;
 	psoDesc.BlendState = XD3D12_BLEND_DESC(D3D12_DEFAULT);
 	psoDesc.DepthStencilState = XD3D12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+
 	psoDesc.NumRenderTargets = 1;
 	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
@@ -743,6 +553,55 @@ DescriptorHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT buffer
 	return cbvHeap;
 }
 
+DescriptorHeap CreateTexture(Kernel kernel, LPCWSTR filename)
+{
+	DescriptorHeap texture = new SDescriptorHeap();
+	texture->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+
+	ID3D12Resource* textureBuffer;
+	ID3D12Resource* textureBufferUpload;
+	D3D12_RESOURCE_DESC textureDesc;
+	D3D12_SUBRESOURCE_DATA textureData;
+
+	{
+		ResourceDesc tempTextureDesc;
+		SubresourceData tempTextureData;
+		LoadImageDataFromFile(tempTextureDesc, tempTextureData, filename);
+		textureDesc = Translate(tempTextureDesc);
+		textureData = Translate(tempTextureData);
+	}
+	
+	ThrowIfFailed(kernel->m_device->CreateCommittedResource(
+		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(&textureBuffer)
+	));
+	UINT64 textureBufferUploadSize;
+	kernel->m_device->GetCopyableFootprints(&textureDesc, 0, 1, 0, nullptr, nullptr, nullptr, &textureBufferUploadSize);
+	ThrowIfFailed(kernel->m_device->CreateCommittedResource(
+		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&XD3D12_RESOURCE_DESC::Buffer(textureBufferUploadSize),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&textureBufferUpload)
+	));
+	UpdateSubresources<1>(kernel->m_commandList.Get(), textureBuffer, textureBufferUpload, 0, 0, 1, &textureData);
+	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(textureBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+	
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+	kernel->m_device->CreateShaderResourceView(textureBuffer, &srvDesc, texture->GetCPUHandle(0));
+	
+	return texture;
+}
+
 void UpdateConstantBuffer(DescriptorHeap cbvHeap, void* bufferData, UINT bufferSize)
 {
 	memcpy(cbvHeap->m_pData, bufferData, bufferSize);
@@ -832,11 +691,18 @@ void SetVertexSetup(Kernel kernel, VertexSetup vertexSetup)
 	
 }
 
-void SetDescriptorHeap(Kernel kernel, DescriptorHeap heap)
+void SetConstantBuffer(Kernel kernel, DescriptorHeap heap)
 {
 	ID3D12DescriptorHeap* descriptorHeaps[] = { heap->m_descHeap.Get() };
 	kernel->m_commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 	kernel->m_commandList->SetGraphicsRootDescriptorTable(0, heap->GetGPUHandle(0));
+}
+
+void SetShaderResource(Kernel kernel, DescriptorHeap heap)
+{
+	ID3D12DescriptorHeap* descriptorHeaps[] = { heap->m_descHeap.Get() };
+	kernel->m_commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	kernel->m_commandList->SetGraphicsRootDescriptorTable(1, heap->GetGPUHandle(0));
 }
 
 void Draw(Kernel kernel, UINT StartVertexLocation, UINT VertexCountPerInstance)
