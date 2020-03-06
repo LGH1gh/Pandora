@@ -4,6 +4,9 @@
 #include <minwindef.h>
 
 // RasterizerDesc //
+struct DEFAULT {};
+extern const DECLSPEC_SELECTANY DEFAULT Default;
+
 typedef
 enum LogicOp
 {
@@ -551,6 +554,24 @@ typedef struct StaticSampleDesc
     UINT ShaderRegister;
     UINT RegisterSpace;
     ShaderVisibility ShaderVisibility;
+    static StaticSampleDesc Init(DEFAULT)
+    {
+        StaticSampleDesc sampler = {};
+        sampler.Filter = FILTER_MIN_MAG_MIP_POINT;
+        sampler.AddressU = TEXTURE_ADDRESS_MODE_BORDER;
+        sampler.AddressV = TEXTURE_ADDRESS_MODE_BORDER;
+        sampler.AddressW = TEXTURE_ADDRESS_MODE_BORDER;
+        sampler.MipLODBias = 0;
+        sampler.MaxAnisotropy = 0;
+        sampler.ComparisonFunc = COMPARISON_FUNC_NEVER;
+        sampler.BorderColor = STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+        sampler.MinLOD = 0.0f;
+        sampler.MaxLOD = 3.402823466e+38f;
+        sampler.ShaderRegister = 0;
+        sampler.RegisterSpace = 0;
+        sampler.ShaderVisibility = SHADER_VISIBILITY_ALL;
+        return sampler;
+    }
 } 	StaticSampleDesc;
 
 typedef 

@@ -5,13 +5,17 @@
 struct Vertex
 {
 	XMFLOAT4 pos;
-	XMFLOAT4 color;
+	XMFLOAT2 texCoord;
+	Vertex(float a, float b, float c, float d, float u, float v):
+		pos(a, b, c, d), texCoord(u, v)
+	{}
 };
 
 struct ConstantBuffer
 {
 	XMFLOAT4X4 worldViewProjection;
 	XMFLOAT4X4 rotateWithY;
+	XMFLOAT4X4 rotateWithZ;
 };
 
 struct SceneConstantBuffer
@@ -73,10 +77,12 @@ protected:
 	RootSignature m_rootSignature;
 	Pipeline m_pipeline;
 	VertexSetup m_vertexSetup;
-	SceneConstantBuffer m_constantData;
+	ConstantBuffer m_constantData;
+	Coordinate m_coordinate;
 
 	DescriptorHeap m_depthStencil;
 	DescriptorHeap m_constantBuffer;
+	DescriptorHeap m_texture;
 
 	UINT m_width, m_height;
 	std::wstring m_title;

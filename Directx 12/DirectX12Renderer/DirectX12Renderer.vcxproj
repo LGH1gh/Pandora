@@ -153,7 +153,12 @@
     <ClCompile Include="Renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shader.hlsl">
+    <None Include="PixelShader.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="VertexShader.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

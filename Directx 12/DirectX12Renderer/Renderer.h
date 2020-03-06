@@ -285,6 +285,7 @@ VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT verte
 
 DescriptorHeap CreateDepthStencil(Kernel kernel);
 DescriptorHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT bufferSize);
+DescriptorHeap CreateTexture(Kernel kernel);
 void UpdateConstantBuffer(DescriptorHeap cbvHeap, void* bufferData, UINT bufferSize);
 
 void EndOnInit(Kernel kernel);
@@ -296,7 +297,8 @@ void BeginRender(Kernel kernel, DescriptorHeap dsvHeap = nullptr, const float* c
 void SetGraphicsRootSignature(Kernel kernel, RootSignature rootSignature);
 void SetPipeline(Kernel kernel, Pipeline pipeline);
 void SetVertexSetup(Kernel kernel, VertexSetup vertexSetup);
-void SetDescriptorHeap(Kernel kernel, DescriptorHeap heap);
+void SetConstantBuffer(Kernel kernel, DescriptorHeap heap);
+void SetShaderResource(Kernel kernel, DescriptorHeap heap);
 void Draw(Kernel kernel, UINT StartVertexLocation, UINT VertexCountPerInstance);
 void DrawIndexed(Kernel kernel, UINT StartIndexLocation, UINT IndexCountPerInstance);
 void DrawIndexInstanced(Kernel kernel, UINT StartIndexLocation, UINT IndexCountPerInstance, UINT StartInstanceLocation, UINT InstanceCount);
