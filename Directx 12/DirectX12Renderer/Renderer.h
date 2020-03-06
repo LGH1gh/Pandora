@@ -238,41 +238,28 @@ typedef struct SDescriptorHeap* DescriptorHeap;
 typedef struct SResource* Resource;
 typedef struct SFence* Fence;
 typedef struct SVertexSetup* VertexSetup;
-typedef struct SBlob* Blob;
 typedef struct SPipeline* Pipeline;
 
 
-typedef
-enum ShaderType
+struct ShaderDesc
 {
-    SHADER_TYPE_VERTEX_SHADER = 0,
-    SHADER_TYPE_PIXEL_SHADER = 1,
-    SHADER_TYPE_HULL_SHADER = 2,
-    SHADER_TYPE_GEOMETRY_SHADER = 3,
-    SHADER_TYPE_DOMAIN_SHADER = 4,
-    SHADER_TYPE_COMPUTE_SHADER = 5,
-}   ShaderType;
-
-struct SBlob
-{
-    SBlob() = default;
-    SBlob(LPVOID address, SIZE_T size) :
-        address(address),
-        size(size)
-    {}
-    LPVOID address;
-    SIZE_T size;
-
-    LPVOID GetBufferPointer(void) { return address; }
-    SIZE_T GetBufferSize(void) { return size; }
+    LPCWSTR filePath;
+    std::string entryPoint;
+    UINT flags;
+    bool active = false;
+    ShaderDesc(LPCWSTR filePath, std::string entryPoint, UINT flags) :
+        filePath(filePath), entryPoint(entryPoint), flags(flags), active(true)
+    {
+    }
+    ShaderDesc() = default;
 };
 
 struct GraphicsPipelineStateDesc
 {
     RootSignature RootSignature;
     InputLayoutDesc InputLayout;
-    Blob VS;
-    Blob PS = nullptr, DS = nullptr, HS = nullptr, GS = nullptr;
+    ShaderDesc VS;
+    ShaderDesc PS, DS, HS, GS;
     // UINT SampleMask;
     // RasterizerDesc RasterizerState;
     CullMode CullMode = CULL_MODE_NONE;
@@ -292,8 +279,7 @@ struct GraphicsPipelineStateDesc
 
 Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd);
 RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount = 0, UINT srvCount = 0, UINT uavCount = 0, StaticSampleDesc* staticSampleDesc = nullptr);
-Blob CreateShaderFromFile(ShaderType shaderType, LPCWSTR filePath, std::string entryPoint, UINT flags);
-Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphicsPipelineStateDesc);
+ Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphicsPipelineStateDesc);
 VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT vertexSize, UINT vertexBufferStride, const void* pIndexData, UINT indexSize, UINT indexBufferStride);
 void EndOnInit(Kernel kernel);
 void EndOnRender(Kernel kernel);

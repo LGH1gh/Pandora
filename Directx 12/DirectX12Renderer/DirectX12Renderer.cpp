@@ -449,14 +449,6 @@ struct SVertexSetup
 };
 
 
-
-void ExecuteCommand(Kernel kernel)
-{
-	ThrowIfFailed(kernel->m_commandList->Close());
-	ID3D12CommandList* ppCommandLists[] = { kernel->m_commandList.Get() };
-	kernel->m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-}
-
 void GetHardwareAdapter(_In_ IDXGIFactory2* pFactory, _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter)
 {
 	ComPtr<IDXGIAdapter1> adapter;
@@ -683,75 +675,12 @@ RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount, UINT srvCount, U
 	return rootSignature;
 }
 
-Blob CreateShaderFromFile(ShaderType shaderType, LPCWSTR filePath, std::string entryPoint, UINT flags)
-{
-	ComPtr<ID3DBlob> shader;
-	switch (shaderType) {
-	case SHADER_TYPE_VERTEX_SHADER:
-		ThrowIfFailed(D3DCompileFromFile(filePath, nullptr, nullptr, entryPoint.c_str(), "vs_5_0", flags, 0, &shader, nullptr));
-		break;
-	case SHADER_TYPE_PIXEL_SHADER:
-		ThrowIfFailed(D3DCompileFromFile(filePath, nullptr, nullptr, entryPoint.c_str(), "ps_5_0", flags, 0, &shader, nullptr));
-		break;
-	case SHADER_TYPE_HULL_SHADER:
-		ThrowIfFailed(D3DCompileFromFile(filePath, nullptr, nullptr, entryPoint.c_str(), "hs_5_0", flags, 0, &shader, nullptr));
-		break;
-	case SHADER_TYPE_DOMAIN_SHADER:
-		ThrowIfFailed(D3DCompileFromFile(filePath, nullptr, nullptr, entryPoint.c_str(), "ds_5_0", flags, 0, &shader, nullptr));
-		break;
-	case SHADER_TYPE_COMPUTE_SHADER:
-		ThrowIfFailed(D3DCompileFromFile(filePath, nullptr, nullptr, entryPoint.c_str(), "cs_5_0", flags, 0, &shader, nullptr));
-		break;
-	default:
-		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-		return nullptr;
-	}
-
-	Blob result = new SBlob(shader->GetBufferPointer(), shader->GetBufferSize());
-	return result;
-}
-
 Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphicsPipelineStateDesc)
 {
-	ComPtr<ID3D12RootSignature> m_rootSignature;
-	// Create an empty root signature.
-	{
-		XD3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-		ComPtr<ID3DBlob> signature;
-		ComPtr<ID3DBlob> error;
-		ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
-		ThrowIfFailed(kernel->m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
-	}
-
-	ComPtr<ID3DBlob> vertexShader;
-	ComPtr<ID3DBlob> pixelShader;
-
-	// Create the pipeline state, which includes compiling and loading shaders.
-	{
-
-
-#if defined(_DEBUG)
-		// Enable better shader debugging with the graphics debugging tools.
-		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-		UINT compileFlags = 0;
-#endif
-
-		ThrowIfFailed(D3DCompileFromFile(L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\Shader.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-		ThrowIfFailed(D3DCompileFromFile(L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\Shader.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
-
-		// Define the vertex input layout.
-	}
-
-	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-	};
 
 	Pipeline pipeline = new SPipeline();
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+	psoDesc.pRootSignature = graphicsPipelineStateDesc.RootSignature->m_rootSignature.Get();
 
 	D3D12_INPUT_ELEMENT_DESC inputElementsDesc[16];
 	UINT offset = 0;
@@ -768,43 +697,64 @@ Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphi
 
 		offset += FormatToBits[graphicsPipelineStateDesc.InputLayout.pInputElementDescs[i].Format] / 8;
 	}
+	psoDesc.InputLayout = { inputElementsDesc, graphicsPipelineStateDesc.InputLayout.NumElements };
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-	//psoDesc.pRootSignature = graphicsPipelineStateDesc.RootSignature->m_rootSignature.Get();
-	//psoDesc.InputLayout = { inputElementsDesc, graphicsPipelineStateDesc.InputLayout.NumElements };
-	//psoDesc.VS = { graphicsPipelineStateDesc.VS->GetBufferPointer(), graphicsPipelineStateDesc.VS->GetBufferSize() };
-	//if (graphicsPipelineStateDesc.DS != nullptr)
-	//	psoDesc.DS = { graphicsPipelineStateDesc.DS->GetBufferPointer(), graphicsPipelineStateDesc.DS->GetBufferSize() };
-	//if (graphicsPipelineStateDesc.HS != nullptr)
-	//	psoDesc.HS = { graphicsPipelineStateDesc.HS->GetBufferPointer(), graphicsPipelineStateDesc.HS->GetBufferSize() };
-	//if (graphicsPipelineStateDesc.PS != nullptr)
-	//	psoDesc.PS = { graphicsPipelineStateDesc.PS->GetBufferPointer(), graphicsPipelineStateDesc.PS->GetBufferSize() };
+	ComPtr<ID3DBlob> vertexShader;
+	ComPtr<ID3DBlob> hullShader;
+	ComPtr<ID3DBlob> domainShader;
+	ComPtr<ID3DBlob> geometryShader;
+	ComPtr<ID3DBlob> pixelShader;
+	{
+		ThrowIfFailed(D3DCompileFromFile(
+			graphicsPipelineStateDesc.VS.filePath, nullptr, nullptr, 
+			graphicsPipelineStateDesc.VS.entryPoint.c_str(), "vs_5_0", 
+			graphicsPipelineStateDesc.VS.flags, 0, &vertexShader, nullptr));
+		psoDesc.VS = XD3D12_SHADER_BYTECODE(vertexShader.Get());
+	}
+	if (graphicsPipelineStateDesc.HS.active)
+	{
+		ThrowIfFailed(D3DCompileFromFile(
+			graphicsPipelineStateDesc.HS.filePath, nullptr, nullptr,
+			graphicsPipelineStateDesc.HS.entryPoint.c_str(), "hs_5_0",
+			graphicsPipelineStateDesc.HS.flags, 0, &hullShader, nullptr));
+		psoDesc.HS = XD3D12_SHADER_BYTECODE(hullShader.Get());
+	}
+	if (graphicsPipelineStateDesc.DS.active)
+	{
+		ThrowIfFailed(D3DCompileFromFile(
+			graphicsPipelineStateDesc.DS.filePath, nullptr, nullptr,
+			graphicsPipelineStateDesc.DS.entryPoint.c_str(), "ds_5_0",
+			graphicsPipelineStateDesc.DS.flags, 0, &domainShader, nullptr));
+		psoDesc.DS = XD3D12_SHADER_BYTECODE(domainShader.Get());
+	}
+	if (graphicsPipelineStateDesc.GS.active)
+	{
+		ThrowIfFailed(D3DCompileFromFile(
+			graphicsPipelineStateDesc.GS.filePath, nullptr, nullptr,
+			graphicsPipelineStateDesc.GS.entryPoint.c_str(), "gs_5_0",
+			graphicsPipelineStateDesc.GS.flags, 0, &geometryShader, nullptr));
+		psoDesc.GS = XD3D12_SHADER_BYTECODE(geometryShader.Get());
+	}
+	if (graphicsPipelineStateDesc.PS.active)
+	{
+		ThrowIfFailed(D3DCompileFromFile(
+			graphicsPipelineStateDesc.PS.filePath, nullptr, nullptr,
+			graphicsPipelineStateDesc.PS.entryPoint.c_str(), "ps_5_0",
+			graphicsPipelineStateDesc.PS.flags, 0, &pixelShader, nullptr));
+		psoDesc.PS = XD3D12_SHADER_BYTECODE(pixelShader.Get());
+	}
 
-	//psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-	//psoDesc.RasterizerState.CullMode = (D3D12_CULL_MODE)(graphicsPipelineStateDesc.CullMode);
-	//psoDesc.RasterizerState.DepthClipEnable = true;
-	//psoDesc.RasterizerState.MultisampleEnable = true;
-	//psoDesc.BlendState = XD3D12_BLEND_DESC(D3D12_DEFAULT);
-	//psoDesc.DepthStencilState = XD3D12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	//psoDesc.NumRenderTargets = 1;
-	//psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	//psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	//psoDesc.SampleDesc.Count = 1;
-	//psoDesc.SampleMask = UINT_MAX;
-
-	psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-	psoDesc.pRootSignature = m_rootSignature.Get();
-	psoDesc.VS = XD3D12_SHADER_BYTECODE(vertexShader.Get());
-	psoDesc.PS = XD3D12_SHADER_BYTECODE(pixelShader.Get());
-	psoDesc.RasterizerState = XD3D12_RASTERIZER_DESC(D3D12_DEFAULT);
+	psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+	psoDesc.RasterizerState.CullMode = (D3D12_CULL_MODE)(graphicsPipelineStateDesc.CullMode);
+	psoDesc.RasterizerState.DepthClipEnable = true;
+	psoDesc.RasterizerState.MultisampleEnable = true;
 	psoDesc.BlendState = XD3D12_BLEND_DESC(D3D12_DEFAULT);
-	psoDesc.DepthStencilState.DepthEnable = FALSE;
-	psoDesc.DepthStencilState.StencilEnable = FALSE;
-	psoDesc.SampleMask = UINT_MAX;
-	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	psoDesc.DepthStencilState = XD3D12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 	psoDesc.NumRenderTargets = 1;
 	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 	psoDesc.SampleDesc.Count = 1;
+	psoDesc.SampleMask = UINT_MAX;
 
 	psoDesc.PrimitiveTopologyType = (D3D12_PRIMITIVE_TOPOLOGY_TYPE)((graphicsPipelineStateDesc.PrimitiveTopologyType + 3) >> 1);
 	pipeline->m_primitiveTopology = (D3D12_PRIMITIVE_TOPOLOGY)(graphicsPipelineStateDesc.PrimitiveTopologyType + 1);
@@ -816,8 +766,9 @@ Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphi
 VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT vertexSize, UINT vertexBufferStride, const void* pIndexData, UINT indexSize, UINT indexBufferStride)
 {
 	VertexSetup vertexSetup = new SVertexSetup();
-	ComPtr<ID3D12Resource> vertexBuffer;
-	ComPtr<ID3D12Resource> vertexBufferUpload;
+	
+	ID3D12Resource* vertexBuffer;
+	ID3D12Resource* vertexBufferUpload;
 	ThrowIfFailed(kernel->m_device->CreateCommittedResource(
 		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
@@ -835,8 +786,8 @@ VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT verte
 		IID_PPV_ARGS(&vertexBufferUpload)
 	));
 	D3D12_SUBRESOURCE_DATA vertexData = { pVertexData, vertexSize, vertexSize };
-	UpdateSubresources<1>(kernel->m_commandList.Get(), vertexBuffer.Get(), vertexBufferUpload.Get(), 0, 0, 1, &vertexData);
-	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+	UpdateSubresources<1>(kernel->m_commandList.Get(), vertexBuffer, vertexBufferUpload, 0, 0, 1, &vertexData);
+	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 
 	vertexSetup->m_vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 	vertexSetup->m_vertexBufferView.StrideInBytes = vertexBufferStride;
@@ -846,8 +797,8 @@ VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT verte
 		return vertexSetup;
 	}
 
-	ComPtr<ID3D12Resource> indexBuffer;
-	ComPtr<ID3D12Resource> indexBufferUpload;
+	ID3D12Resource* indexBuffer;
+	ID3D12Resource* indexBufferUpload;
 	ThrowIfFailed(kernel->m_device->CreateCommittedResource(
 		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
@@ -865,8 +816,8 @@ VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT verte
 		IID_PPV_ARGS(&indexBufferUpload)
 	));
 	D3D12_SUBRESOURCE_DATA indexData = { pIndexData, indexSize, indexSize };
-	UpdateSubresources<1>(kernel->m_commandList.Get(), indexBuffer.Get(), indexBufferUpload.Get(), 0, 0, 1, &indexData);
-	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+	UpdateSubresources<1>(kernel->m_commandList.Get(), indexBuffer, indexBufferUpload, 0, 0, 1, &indexData);
+	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(indexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 
 	vertexSetup->m_indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
 	vertexSetup->m_indexBufferView.SizeInBytes = indexSize;
@@ -877,7 +828,9 @@ VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT verte
 
 void EndOnInit(Kernel kernel)
 {
-	ExecuteCommand(kernel);
+	ThrowIfFailed(kernel->m_commandList->Close());
+	ID3D12CommandList* ppCommandLists[] = { kernel->m_commandList.Get() };
+	kernel->m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	ThrowIfFailed(kernel->m_device->CreateFence(kernel->m_fenceValues[kernel->m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&kernel->m_fence)));
 	kernel->m_fenceValues[kernel->m_frameIndex]++;
@@ -939,14 +892,15 @@ void SetPipeline(Kernel kernel, Pipeline pipeline)
 
 void SetVertexSetup(Kernel kernel, VertexSetup vertexSetup)
 {
-	if (vertexSetup->m_indexBufferView.BufferLocation)
-	{
-		kernel->m_commandList->IASetIndexBuffer(&vertexSetup->m_indexBufferView);
-	}
 	if (vertexSetup->m_vertexBufferView.BufferLocation)
 	{
 		kernel->m_commandList->IASetVertexBuffers(0, 1, &vertexSetup->m_vertexBufferView);
 	}
+	if (vertexSetup->m_indexBufferView.BufferLocation)
+	{
+		kernel->m_commandList->IASetIndexBuffer(&vertexSetup->m_indexBufferView);
+	}
+	
 }
 
 void Draw(Kernel kernel, UINT StartVertexLocation, UINT VertexCountPerInstance)

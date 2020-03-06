@@ -18,9 +18,6 @@ void BaseApp::OnInit()
     m_rootSignature = CreateRootSignature(m_kernel);
 
     UINT compileFlags = COMPILE_DEBUG | COMPILE_SKIP_OPTIMIZATION;
-    Blob vertexShader = CreateShaderFromFile(SHADER_TYPE_VERTEX_SHADER, L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\Shader.hlsl", "VSMain", compileFlags);
-    Blob pixelShader = CreateShaderFromFile(SHADER_TYPE_PIXEL_SHADER, L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\Shader.hlsl", "PSMain", compileFlags);
-    
     InputElementDesc inputElementDesc[] =
     {
         { "POSITION", FORMAT_R32G32B32A32_FLOAT },
@@ -29,8 +26,8 @@ void BaseApp::OnInit()
     GraphicsPipelineStateDesc psoDesc;
     psoDesc.RootSignature = m_rootSignature;
     psoDesc.InputLayout = { inputElementDesc, _countof(inputElementDesc) };
-    psoDesc.VS = vertexShader;
-    psoDesc.PS = pixelShader;
+    psoDesc.VS = ShaderDesc(L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\Shader.hlsl", "VSMain", compileFlags);
+    psoDesc.PS = ShaderDesc(L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\Shader.hlsl", "PSMain", compileFlags);
     psoDesc.CullMode = CULL_MODE_NONE;
 
     m_pipeline = CreateGraphicsPipeline(m_kernel, psoDesc);
