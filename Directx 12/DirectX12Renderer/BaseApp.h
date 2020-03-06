@@ -14,6 +14,11 @@ struct ConstantBuffer
 	XMFLOAT4X4 rotateWithY;
 };
 
+struct SceneConstantBuffer
+{
+	XMFLOAT4 offset;
+};
+
 struct Coordinate
 {
 	XMFLOAT3 cameraPosition;
@@ -68,8 +73,10 @@ protected:
 	RootSignature m_rootSignature;
 	Pipeline m_pipeline;
 	VertexSetup m_vertexSetup;
+	SceneConstantBuffer m_constantData;
 
 	DescriptorHeap m_depthStencil;
+	DescriptorHeap m_constantBuffer;
 
 	UINT m_width, m_height;
 	std::wstring m_title;

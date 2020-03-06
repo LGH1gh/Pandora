@@ -2,21 +2,7 @@
 #include "Renderer.h"
 #include "DirectX12RenderHelper.h"
 
-//
-//struct SCommandAllocator
-//{
-//	ComPtr<ID3D12CommandAllocator> commandAllocator;
-//
-//	void Init(ID3D12Device* device)
-//	{
-//		ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator)));
-//	}
-//};
-//
-//struct SContext
-//{
-//	ComPtr<ID3D12GraphicsCommandList> commandList;
-//};
+
 //
 //struct SBlendState
 //{
@@ -63,21 +49,7 @@
 //	ComPtr<ID3D12Resource> renderTargets[FrameCount];
 //};
 //
-//
-//struct SBuffer
-//{
-//	ComPtr<ID3D12Resource> buffer;
-//	UINT size;
-//	HeapType heapType;
-//};
-//
-//struct SDepthStencil
-//{
-//	ComPtr<ID3D12Resource> depthStencilBuffer;
-//	ComPtr<ID3D12DescriptorHeap> dsDescriptorHeap;
-//};
 
-//
 //
 //BlendState CreateBlendState(Blend src, Blend dst, BlendOperator mode, UINT mask, bool alphaToCoverageEnable)
 //{
@@ -127,24 +99,6 @@
 //	return blendState;
 //}
 //
-//DescriptorHeap CreateConstantBuffer(SDevice* device, const void* pData, UINT count, UINT size)
-//{
-//	DescriptorHeap result = new SDescriptorHeap();
-//	result->Init(device->device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, count, true);
-//
-//
-//	BufferParams constantBufferParams((size + 255) & ~255, HEAP_TYPE_UPLOAD, RESOURCE_STATE_GENERIC_READ);
-//	Buffer constantBuffer = CreateBuffer(device, constantBufferParams);
-//
-//	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-//	cbvDesc.BufferLocation = constantBuffer->buffer->GetGPUVirtualAddress();
-//	cbvDesc.SizeInBytes = (size + 255) & ~255;
-//	device->device->CreateConstantBufferView(&cbvDesc, result->GetCPUHandle(0));
-//
-//	XD3D12_RANGE readRange(0, 0);
-//	ThrowIfFailed(constantBuffer->buffer->Map(0, &readRange, reinterpret_cast<void**>(&result->m_pData)));
-//	memcpy(result->m_pData, &pData, size);
-//	return result;
 //}
 //
 //DescriptorHeap CreateTexture(SDevice* device)
@@ -210,11 +164,6 @@
 //	return result;
 //}
 //
-
-//
-//
-
-//
 //void UpdateBuffer(SDescriptorHeap* descriptor, void* pData, UINT size)
 //{
 //	memcpy(descriptor->m_pData, pData, size);
@@ -266,37 +215,6 @@
 //	ID3D12DescriptorHeap* ppHeaps1[] = { heap1->m_descHeap.Get() };
 //	device->mainContext->commandList->SetDescriptorHeaps(_countof(ppHeaps1), ppHeaps1);
 //	device->mainContext->commandList->SetGraphicsRootDescriptorTable(0, heap1->GetGPUHandle(0));
-//}
-//
-
-//
-
-//
-
-//
-
-//
-
-//
-//void Present(SDevice* device)
-//{
-//	device->swapChain->Present(0, 0);
-//	MoveToNextFrame(device);
-//}
-//
-//Context GetContext(SDevice* device)
-//{
-//	return device->mainContext;
-//}
-//
-//RenderPass GetRenderPass(SDevice* device)
-//{
-//	return device->backBufferRenderPass;
-//}
-//
-//void Destory(SDevice* device)
-//{
-//	CloseHandle(device->fenceEvent);
 //}
 
 struct SDescriptorHeap
@@ -599,7 +517,7 @@ RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount, UINT srvCount, U
 
 	if (staticSampleDesc == nullptr)
 	{
-		rootSignatureDesc.Init_1_1(index, nullptr, 0, nullptr, rootSignatureFlags);
+		rootSignatureDesc.Init_1_1(index, rootParameters, 0, nullptr, rootSignatureFlags);
 	}
 	else
 	{
@@ -797,40 +715,38 @@ DescriptorHeap CreateDepthStencil(Kernel kernel)
 	return dsvHeap;
 }
 
-//DepthStencil CreateDepthStencil(SDevice* device, UINT width, UINT height)
-//{
-//	DepthStencil depthStencil = new SDepthStencil();
-//
-//	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-//	dsvHeapDesc.NumDescriptors = 1;
-//	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-//	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-//	ThrowIfFailed(device->device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&depthStencil->dsDescriptorHeap)));
-//
-//	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
-//	depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
-//	depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-//	depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
-//
-//	D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
-//	depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-//	depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
-//	depthOptimizedClearValue.DepthStencil.Stencil = 0;
-//
-//	device->device->CreateCommittedResource(
-//		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-//		D3D12_HEAP_FLAG_NONE,
-//		&XD3D12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
-//		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-//		&depthOptimizedClearValue,
-//		IID_PPV_ARGS(&depthStencil->depthStencilBuffer)
-//	);
-//	depthStencil->dsDescriptorHeap->SetName(L"Depth/Stencil Resource Heap");
-//
-//	device->device->CreateDepthStencilView(depthStencil->depthStencilBuffer.Get(), &depthStencilDesc, depthStencil->dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-//
-//	return depthStencil;
-//}
+DescriptorHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT bufferSize)
+{
+	DescriptorHeap cbvHeap = new SDescriptorHeap();
+	ID3D12Resource* constantBuffer;
+	cbvHeap->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+	
+	ThrowIfFailed(kernel->m_device->CreateCommittedResource(
+		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&XD3D12_RESOURCE_DESC::Buffer((bufferSize + 255) & ~255),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&constantBuffer)
+	));
+
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+	cbvDesc.BufferLocation = constantBuffer->GetGPUVirtualAddress();
+	cbvDesc.SizeInBytes = (bufferSize + 255) & ~255;
+	kernel->m_device->CreateConstantBufferView(&cbvDesc, cbvHeap->GetCPUHandle(0));
+	ZeroMemory(bufferData, bufferSize);
+
+	XD3D12_RANGE readRange(0, 0);
+	ThrowIfFailed(constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&cbvHeap->m_pData)));
+	memcpy(cbvHeap->m_pData, bufferData, bufferSize);
+
+	return cbvHeap;
+}
+
+void UpdateConstantBuffer(DescriptorHeap cbvHeap, void* bufferData, UINT bufferSize)
+{
+	memcpy(cbvHeap->m_pData, bufferData, bufferSize);
+}
 
 void EndOnInit(Kernel kernel)
 {
@@ -914,6 +830,13 @@ void SetVertexSetup(Kernel kernel, VertexSetup vertexSetup)
 		kernel->m_commandList->IASetIndexBuffer(&vertexSetup->m_indexBufferView);
 	}
 	
+}
+
+void SetDescriptorHeap(Kernel kernel, DescriptorHeap heap)
+{
+	ID3D12DescriptorHeap* descriptorHeaps[] = { heap->m_descHeap.Get() };
+	kernel->m_commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	kernel->m_commandList->SetGraphicsRootDescriptorTable(0, heap->GetGPUHandle(0));
 }
 
 void Draw(Kernel kernel, UINT StartVertexLocation, UINT VertexCountPerInstance)

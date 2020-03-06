@@ -17,7 +17,7 @@ void BaseApp::OnInit()
     m_kernel = CreateKernel(m_width, m_height, false, m_hwnd);
     SampleDesc sampleDesc;
 
-    m_rootSignature = CreateRootSignature(m_kernel, 0, 0, 0);
+    m_rootSignature = CreateRootSignature(m_kernel, 1, 0, 0);
 
     UINT compileFlags = COMPILE_DEBUG | COMPILE_SKIP_OPTIMIZATION;
     InputElementDesc inputElementDesc[] =
@@ -60,7 +60,7 @@ void BaseApp::OnInit()
         triangleVertices, sizeof(triangleVertices), sizeof(Vertex),
         indices, sizeof(indices), sizeof(DWORD));
     m_depthStencil = CreateDepthStencil(m_kernel);
-
+    m_constantBuffer = CreateConstantBuffer(m_kernel, &m_constantData, sizeof(m_constantData));
 
     EndOnInit(m_kernel);
     //m_constantBufferDesc = CreateConstantBuffer(m_device, &m_constantBufferData, 1, sizeof(m_constantBufferData));
@@ -71,17 +71,29 @@ void BaseApp::OnInit()
 
 void BaseApp::OnUpdate()
 {
-    //static float rotateAngle = 0;
-    //ConstantBuffer constantBuffer = {};
-    //XMStoreFloat4x4(&constantBuffer.worldViewProjection, XMMatrixMultiply(m_coordinate.GetViewMatrix(), m_coordinate.GetProjectionMatrix(0.8f, static_cast<float>(GetWidth()) / static_cast<float>(GetHeight()), 1.0f, 1000.0f)));
-    //constantBuffer.rotateWithY = XMFLOAT4X4(
-    //    (float)cos(rotateAngle), 0, (float)sin(rotateAngle), 0,
-    //    0, 1, 0, 0,
-    //    (float)-sin(rotateAngle), 0, (float)cos(rotateAngle), 0,
-    //    0, 0, 0, 1
-    //);
-    //rotateAngle += 0.001f;
-    //UpdateBuffer(m_constantBufferDesc, &constantBuffer, sizeof(constantBuffer));
+    static float rIncrement = 0.002f;
+    static float gIncrement = 0.006f;
+    static float bIncrement = 0.009f;
+    m_constantData.offset.x += rIncrement;
+    m_constantData.offset.y += gIncrement;
+    m_constantData.offset.z += bIncrement;
+
+    if (m_constantData.offset.x >= 1.0 || m_constantData.offset.x <= 0.0)
+    {
+        m_constantData.offset.x = m_constantData.offset.x >= 1.0 ? 1.0 : 0.0;
+        rIncrement = -rIncrement;
+    }
+    if (m_constantData.offset.y >= 1.0 || m_constantData.offset.y <= 0.0)
+    {
+        m_constantData.offset.y = m_constantData.offset.y >= 1.0 ? 1.0 : 0.0;
+        gIncrement = -gIncrement;
+    }
+    if (m_constantData.offset.z >= 1.0 || m_constantData.offset.z <= 0.0)
+    {
+        m_constantData.offset.z = m_constantData.offset.z >= 1.0 ? 1.0 : 0.0;
+        bIncrement = -bIncrement;
+    }
+    UpdateConstantBuffer(m_constantBuffer, &m_constantData, sizeof(m_constantData));
 }
 
 void BaseApp::OnRender()
@@ -99,7 +111,7 @@ void BaseApp::PopulateCommand()
         SetGraphicsRootSignature(m_kernel, m_rootSignature);
         SetPipeline(m_kernel, m_pipeline);;
         SetVertexSetup(m_kernel, m_vertexSetup);
-
+        SetDescriptorHeap(m_kernel, m_constantBuffer);
         //std::vector<DescriptorHeap> heaps = { m_constantBufferDesc, m_texture };
         //SetDescriptorHeaps(m_device, m_constantBufferDesc, m_texture);
         //SetConstantBuffer(m_device, m_constantBufferDesc);

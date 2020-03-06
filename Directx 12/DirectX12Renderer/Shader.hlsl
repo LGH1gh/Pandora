@@ -18,6 +18,11 @@
 //Texture2D t1 : register(t0);
 //SamplerState s1 : register(s0);
 
+cbuffer ConstantBuffer : register(b0)
+{
+     float4 offset;
+}
+
 struct PSInput
 {
     float4 position : SV_POSITION;
@@ -42,5 +47,5 @@ PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    return input.color;
+    return input.color + offset;
 }
