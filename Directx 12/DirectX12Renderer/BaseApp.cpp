@@ -15,7 +15,9 @@ BaseApp::~BaseApp()
 void BaseApp::OnInit()
 {
     m_kernel = CreateKernel(m_width, m_height, false, m_hwnd);
-    m_rootSignature = CreateRootSignature(m_kernel);
+    SampleDesc sampleDesc;
+
+    m_rootSignature = CreateRootSignature(m_kernel, 0, 0, 0);
 
     UINT compileFlags = COMPILE_DEBUG | COMPILE_SKIP_OPTIMIZATION;
     InputElementDesc inputElementDesc[] =
@@ -37,22 +39,31 @@ void BaseApp::OnInit()
         { { 0.5f, 0.5f, 0.5f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
         { { -0.5f, 0.5f, 0.5f, 1.0f }, { 1.0f, 1.0f, 0.0f, 1.0f } },
         { { 0.5f, -0.5f, 0.5f, 1.0f }, { 1.0f, 0.0f, 1.0f, 1.0f } },
-        { { -0.5f, -0.5f, 0.5f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+        { { -0.5f, -0.5f, 0.5f, 1.0f }, { 0.0f, 1.0f, 1.0f, 1.0f } },
+
+        { { 0.0f, 0.0f, 0.7f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+        { { -0.75f, 0.0f, 0.7f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+        { { -0.75f, 0.75f, 0.7f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+        { { 0.0f, 0.75f, 0.7f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
 
     };
     DWORD indices[] =
     {
         0, 1, 2,
-        1, 2, 3
+        1, 2, 3,
+
+        4, 5, 6,
+        4, 6, 7
     };
     m_vertexSetup = CreateVertexSetup(
         m_kernel,
         triangleVertices, sizeof(triangleVertices), sizeof(Vertex),
         indices, sizeof(indices), sizeof(DWORD));
+    m_depthStencil = CreateDepthStencil(m_kernel);
+
 
     EndOnInit(m_kernel);
     //m_constantBufferDesc = CreateConstantBuffer(m_device, &m_constantBufferData, 1, sizeof(m_constantBufferData));
-    //m_depthStencil = CreateDepthStencil(m_device, GetWidth(), GetHeight());
     //m_texture = CreateTexture(m_device);
     //ExecuteCommand(m_device);
     //MoveToNextFrame(m_device);
@@ -83,8 +94,7 @@ void BaseApp::PopulateCommand()
 {
     Reset(m_kernel, m_pipeline);
 
-    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-    BeginRender(m_kernel, clearColor);
+    BeginRender(m_kernel, m_depthStencil);
     {
         SetGraphicsRootSignature(m_kernel, m_rootSignature);
         SetPipeline(m_kernel, m_pipeline);;
@@ -94,7 +104,10 @@ void BaseApp::PopulateCommand()
         //SetDescriptorHeaps(m_device, m_constantBufferDesc, m_texture);
         //SetConstantBuffer(m_device, m_constantBufferDesc);
         //SetTextureBuffer(m_device, m_texture);
+
+        DrawIndexed(m_kernel, 6, 6);
         DrawIndexed(m_kernel, 0, 6);
+
     }
     EndRender(m_kernel);
 }

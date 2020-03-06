@@ -2,32 +2,6 @@
 #include "Renderer.h"
 #include "DirectX12RenderHelper.h"
 
-
-
-//DXGI_FORMAT GetDXGIFormatFromWICFormat(WICPixelFormatGUID& wicFormatGUID)
-//{
-//	if (wicFormatGUID == GUID_WICPixelFormat128bppRGBAFloat) return DXGI_FORMAT_R32G32B32A32_FLOAT;
-//	else if (wicFormatGUID == GUID_WICPixelFormat64bppRGBAHalf) return DXGI_FORMAT_R16G16B16A16_FLOAT;
-//	else if (wicFormatGUID == GUID_WICPixelFormat64bppRGBA) return DXGI_FORMAT_R16G16B16A16_UNORM;
-//	else if (wicFormatGUID == GUID_WICPixelFormat32bppRGBA) return DXGI_FORMAT_R8G8B8A8_UNORM;
-//	else if (wicFormatGUID == GUID_WICPixelFormat32bppBGRA) return DXGI_FORMAT_B8G8R8A8_UNORM;
-//	else if (wicFormatGUID == GUID_WICPixelFormat32bppBGR) return DXGI_FORMAT_B8G8R8X8_UNORM;
-//	else if (wicFormatGUID == GUID_WICPixelFormat32bppRGBA1010102XR) return DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM;
-//
-//	else if (wicFormatGUID == GUID_WICPixelFormat32bppRGBA1010102) return DXGI_FORMAT_R10G10B10A2_UNORM;
-//	else if (wicFormatGUID == GUID_WICPixelFormat16bppBGRA5551) return DXGI_FORMAT_B5G5R5A1_UNORM;
-//	else if (wicFormatGUID == GUID_WICPixelFormat16bppBGR565) return DXGI_FORMAT_B5G6R5_UNORM;
-//	else if (wicFormatGUID == GUID_WICPixelFormat32bppGrayFloat) return DXGI_FORMAT_R32_FLOAT;
-//	else if (wicFormatGUID == GUID_WICPixelFormat16bppGrayHalf) return DXGI_FORMAT_R16_FLOAT;
-//	else if (wicFormatGUID == GUID_WICPixelFormat16bppGray) return DXGI_FORMAT_R16_UNORM;
-//	else if (wicFormatGUID == GUID_WICPixelFormat8bppGray) return DXGI_FORMAT_R8_UNORM;
-//	else if (wicFormatGUID == GUID_WICPixelFormat8bppAlpha) return DXGI_FORMAT_A8_UNORM;
-//
-//	else return DXGI_FORMAT_UNKNOWN;
-//}
-//
-//
-
 //
 //struct SCommandAllocator
 //{
@@ -236,40 +210,7 @@
 //	return result;
 //}
 //
-//DepthStencil CreateDepthStencil(SDevice* device, UINT width, UINT height)
-//{
-//	DepthStencil depthStencil = new SDepthStencil();
-//
-//	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-//	dsvHeapDesc.NumDescriptors = 1;
-//	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-//	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-//	ThrowIfFailed(device->device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&depthStencil->dsDescriptorHeap)));
-//
-//	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
-//	depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
-//	depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-//	depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
-//
-//	D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
-//	depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-//	depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
-//	depthOptimizedClearValue.DepthStencil.Stencil = 0;
-//
-//	device->device->CreateCommittedResource(
-//		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-//		D3D12_HEAP_FLAG_NONE,
-//		&XD3D12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
-//		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-//		&depthOptimizedClearValue,
-//		IID_PPV_ARGS(&depthStencil->depthStencilBuffer)
-//	);
-//	depthStencil->dsDescriptorHeap->SetName(L"Depth/Stencil Resource Heap");
-//
-//	device->device->CreateDepthStencilView(depthStencil->depthStencilBuffer.Get(), &depthStencilDesc, depthStencil->dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-//
-//	return depthStencil;
-//}
+
 //
 //
 
@@ -826,6 +767,71 @@ VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT verte
 	return vertexSetup;
 }
 
+DescriptorHeap CreateDepthStencil(Kernel kernel)
+{
+	DescriptorHeap dsvHeap = new SDescriptorHeap();
+	dsvHeap->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
+
+	D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
+	depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
+	depthOptimizedClearValue.DepthStencil.Stencil = 0;
+
+	ID3D12Resource* depthStencilBuffer;
+	ThrowIfFailed(kernel->m_device->CreateCommittedResource(
+		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&XD3D12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, kernel->m_width, kernel->m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&depthOptimizedClearValue,
+		IID_PPV_ARGS(&depthStencilBuffer)
+	));
+
+	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
+	depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+	kernel->m_device->CreateDepthStencilView(depthStencilBuffer, &depthStencilDesc, dsvHeap->GetCPUHandle(0));
+
+	return dsvHeap;
+}
+
+//DepthStencil CreateDepthStencil(SDevice* device, UINT width, UINT height)
+//{
+//	DepthStencil depthStencil = new SDepthStencil();
+//
+//	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+//	dsvHeapDesc.NumDescriptors = 1;
+//	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+//	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+//	ThrowIfFailed(device->device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&depthStencil->dsDescriptorHeap)));
+//
+//	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
+//	depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+//	depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+//	depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
+//
+//	D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
+//	depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+//	depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
+//	depthOptimizedClearValue.DepthStencil.Stencil = 0;
+//
+//	device->device->CreateCommittedResource(
+//		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+//		D3D12_HEAP_FLAG_NONE,
+//		&XD3D12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+//		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+//		&depthOptimizedClearValue,
+//		IID_PPV_ARGS(&depthStencil->depthStencilBuffer)
+//	);
+//	depthStencil->dsDescriptorHeap->SetName(L"Depth/Stencil Resource Heap");
+//
+//	device->device->CreateDepthStencilView(depthStencil->depthStencilBuffer.Get(), &depthStencilDesc, depthStencil->dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+//
+//	return depthStencil;
+//}
+
 void EndOnInit(Kernel kernel)
 {
 	ThrowIfFailed(kernel->m_commandList->Close());
@@ -862,7 +868,7 @@ void Reset(Kernel kernel, Pipeline pipeline)
 	ThrowIfFailed(kernel->m_commandList->Reset(kernel->m_commandAllocators[kernel->m_frameIndex].Get(), pipeline->m_pipeline.Get()));
 }
 
-void BeginRender(Kernel kernel, const float* clearColor)
+void BeginRender(Kernel kernel, DescriptorHeap dsvHeap, const float* clearColor)
 {
 
 	D3D12_VIEWPORT vp = { 0.0f, 0.0f, static_cast<float>(kernel->m_width), static_cast<float>(kernel->m_height), 0.0f, 1.0f };
@@ -872,11 +878,18 @@ void BeginRender(Kernel kernel, const float* clearColor)
 	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(kernel->m_renderTargets[kernel->m_frameIndex]->m_resource.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(kernel->m_rtvHeap->GetCPUHandle(kernel->m_frameIndex));
-	kernel->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
-	kernel->m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-
-	//XD3D12_CPU_DESCRIPTOR_HANDLE dsvHandle(depthStencil->dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	//device->mainContext->commandList->ClearDepthStencilView(depthStencil->dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	if (dsvHeap == nullptr)
+	{
+		kernel->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+		kernel->m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+	}
+	else
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsvHeap->GetCPUHandle(0));
+		kernel->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+		kernel->m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+		kernel->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	}
 }
 
 void SetGraphicsRootSignature(Kernel kernel, RootSignature rootSignature)

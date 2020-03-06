@@ -69,6 +69,8 @@ protected:
 	Pipeline m_pipeline;
 	VertexSetup m_vertexSetup;
 
+	DescriptorHeap m_depthStencil;
+
 	UINT m_width, m_height;
 	std::wstring m_title;
 	HWND m_hwnd;

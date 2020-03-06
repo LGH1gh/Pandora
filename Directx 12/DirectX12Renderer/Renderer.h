@@ -7,6 +7,7 @@
 
 
 static const int FrameCount = 2;
+static const float Color[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 //
 //typedef struct SBlendState* BlendState;
 //typedef struct STexture* Texture;
@@ -279,14 +280,16 @@ struct GraphicsPipelineStateDesc
 
 Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd);
 RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount = 0, UINT srvCount = 0, UINT uavCount = 0, StaticSampleDesc* staticSampleDesc = nullptr);
- Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphicsPipelineStateDesc);
+Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphicsPipelineStateDesc);
 VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT vertexSize, UINT vertexBufferStride, const void* pIndexData, UINT indexSize, UINT indexBufferStride);
+
+DescriptorHeap CreateDepthStencil(Kernel kernel);
 void EndOnInit(Kernel kernel);
 void EndOnRender(Kernel kernel);
 void EndOnDestory(Kernel kernel);
 
 void Reset(Kernel kernel, Pipeline pipeline);
-void BeginRender(Kernel kernel, const float* clearColor);
+void BeginRender(Kernel kernel, DescriptorHeap dsvHeap = nullptr, const float* clearColor = Color);
 void SetGraphicsRootSignature(Kernel kernel, RootSignature rootSignature);
 void SetPipeline(Kernel kernel, Pipeline pipeline);
 void SetVertexSetup(Kernel kernel, VertexSetup vertexSetup);
