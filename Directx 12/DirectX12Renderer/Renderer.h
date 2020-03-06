@@ -285,7 +285,11 @@ VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT verte
 
 DescriptorHeap CreateDepthStencil(Kernel kernel);
 DescriptorHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT bufferSize);
+<<<<<<< HEAD
 DescriptorHeap CreateTexture(Kernel kernel, LPCWSTR filename);
+=======
+DescriptorHeap CreateTexture(Kernel kernel);
+>>>>>>> de208ab0556ed22f3464c195743df09e49237a0b
 void UpdateConstantBuffer(DescriptorHeap cbvHeap, void* bufferData, UINT bufferSize);
 
 void EndOnInit(Kernel kernel);
