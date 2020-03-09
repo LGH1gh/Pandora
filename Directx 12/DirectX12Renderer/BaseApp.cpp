@@ -155,13 +155,6 @@ void BaseApp::PopulateCommand()
         SetVertexSetup(m_kernel, m_vertexSetup);
         SetConstantBuffer(m_kernel, m_constantBuffer);
         SetShaderResource(m_kernel, m_texture);
-<<<<<<< HEAD
-=======
-        //std::vector<DescriptorHeap> heaps = { m_constantBufferDesc, m_texture };
-        //SetDescriptorHeaps(m_device, m_constantBufferDesc, m_texture);
-        //SetConstantBuffer(m_device, m_constantBufferDesc);
-        //SetTextureBuffer(m_device, m_texture);
->>>>>>> de208ab0556ed22f3464c195743df09e49237a0b
 
         DrawIndexed(m_kernel, 0, 36);
 
