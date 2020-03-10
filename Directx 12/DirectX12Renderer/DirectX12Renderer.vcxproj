@@ -141,6 +141,7 @@
   <ItemGroup>
     <ClInclude Include="BaseApp.h" />
     <ClInclude Include="DirectX12RenderHelper.h" />
+    <ClInclude Include="Font.h" />
     <ClInclude Include="Math.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RendererHelper.h" />

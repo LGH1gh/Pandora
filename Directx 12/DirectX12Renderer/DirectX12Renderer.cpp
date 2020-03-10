@@ -40,11 +40,6 @@ struct SDescriptorHeap
 	}
 };
 
-struct SResource
-{
-	ComPtr<ID3D12Resource> m_resource;
-};
-
 struct SKernel
 {
 	ComPtr<ID3D12Device> m_device;
@@ -54,22 +49,169 @@ struct SKernel
 	ComPtr<IDXGISwapChain3> m_swapChain;
 
 	DescriptorHeap m_rtvHeap;
-	Resource m_renderTargets[FrameCount];
+	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 
 	UINT m_frameIndex;
 	HANDLE m_fenceEvent;
 	ComPtr<ID3D12Fence> m_fence;
 	UINT64 m_fenceValues[FrameCount];
 
+	UILayer m_uiLayer;
+
 	UINT m_width, m_height;
 	SKernel()
 	{
 		m_rtvHeap = new SDescriptorHeap;
+	}
+
+	void Destroy();
+};
+
+struct SUILayer
+{
+
+	struct TextBlock
+	{
+		std::wstring text;
+		D2D1_RECT_F layout;
+		ComPtr<IDWriteTextFormat> format;
+	};
+	std::vector<TextBlock> m_textBlock;
+
+	ComPtr<ID3D11DeviceContext> m_d3d11DeviceContext;
+	ComPtr<ID3D11On12Device> m_d3d11On12Device;
+	ComPtr<IDWriteFactory> m_dwriteFactory;
+	//ComPtr<ID2D1Factory3> m_d2dFactory;
+	ComPtr<ID2D1Device2> m_d2dDevice;
+	ComPtr<ID2D1DeviceContext2> m_d2dDeviceContext;
+	ComPtr<ID3D11Resource> m_wrappedRenderTargets[FrameCount];
+	ComPtr<ID2D1Bitmap1> m_d2dRenderTargets[FrameCount];
+
+	ComPtr<ID2D1SolidColorBrush> m_textBrush;
+	ComPtr<IDWriteTextFormat> m_textFormat;
+	SUILayer(Kernel kernel, HWND hwnd)
+	{
+		UINT d3d11DeviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+		D2D1_FACTORY_OPTIONS d2dFactoryOptions = {};
+#if defined(_DEBUG) || defined(DBG)
+		// Enable the D2D debug layer.
+		d2dFactoryOptions.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
+
+		// Enable the D3D11 debug layer.
+		d3d11DeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+		ComPtr<ID3D11Device> d3d11Device;
+		ID3D12CommandQueue* ppCommandQueues[] = { kernel->m_commandQueue.Get() };
+		ThrowIfFailed(D3D11On12CreateDevice(
+			kernel->m_device.Get(),
+			d3d11DeviceFlags,
+			nullptr,
+			0,
+			reinterpret_cast<IUnknown**>(ppCommandQueues),
+			_countof(ppCommandQueues),
+			0,
+			&d3d11Device,
+			&m_d3d11DeviceContext,
+			nullptr
+		));
+
+		// Query the 11On12 device from the 11 device.
+		ThrowIfFailed(d3d11Device.As(&m_d3d11On12Device));
+
+#if defined(_DEBUG) || defined(DBG)
+		// Filter a debug error coming from the 11on12 layer.
+		ComPtr<ID3D12InfoQueue> infoQueue;
+		if (SUCCEEDED(kernel->m_device->QueryInterface(IID_PPV_ARGS(&infoQueue))))
+		{
+			// Suppress messages based on their severity level.
+			D3D12_MESSAGE_SEVERITY severities[] =
+			{
+				D3D12_MESSAGE_SEVERITY_INFO,
+			};
+
+			// Suppress individual messages by their ID.
+			D3D12_MESSAGE_ID denyIds[] =
+			{
+				// This occurs when there are uninitialized descriptors in a descriptor table, even when a
+				// shader does not access the missing descriptors.
+				D3D12_MESSAGE_ID_INVALID_DESCRIPTOR_HANDLE,
+			};
+
+			D3D12_INFO_QUEUE_FILTER filter = {};
+			filter.DenyList.NumSeverities = _countof(severities);
+			filter.DenyList.pSeverityList = severities;
+			filter.DenyList.NumIDs = _countof(denyIds);
+			filter.DenyList.pIDList = denyIds;
+
+			ThrowIfFailed(infoQueue->PushStorageFilter(&filter));
+		}
+#endif
+		// Create D2D/DWrite components.
+		{
+			ComPtr<ID2D1Factory3> factory;
+			ComPtr<IDXGIDevice> dxgiDevice;
+			ThrowIfFailed(m_d3d11On12Device.As(&dxgiDevice));
+
+			ThrowIfFailed(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory3), &d2dFactoryOptions, &factory));
+			ThrowIfFailed(factory->CreateDevice(dxgiDevice.Get(), &m_d2dDevice));
+			ThrowIfFailed(m_d2dDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &m_d2dDeviceContext));
+
+			m_d2dDeviceContext->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
+			ThrowIfFailed(m_d2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), &m_textBrush));
+
+			ThrowIfFailed(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), &m_dwriteFactory));
+		}
+
+		float dpi = (float)GetDpiForWindow(hwnd);
+		D2D1_BITMAP_PROPERTIES1 bitmapProperties = D2D1::BitmapProperties1(
+			D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+			D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED),
+			dpi,
+			dpi
+		);
+
 		for (UINT n = 0; n < FrameCount; ++n)
 		{
-			m_renderTargets[n] = new SResource;
+			D3D11_RESOURCE_FLAGS d3d11Flags = { D3D11_BIND_RENDER_TARGET };
+			ThrowIfFailed(m_d3d11On12Device->CreateWrappedResource(
+				kernel->m_renderTargets[n].Get(),
+				&d3d11Flags,
+				D3D12_RESOURCE_STATE_RENDER_TARGET,
+				D3D12_RESOURCE_STATE_PRESENT,
+				IID_PPV_ARGS(&m_wrappedRenderTargets[n])
+			));
+		
+			ComPtr<IDXGISurface> surface;
+			ThrowIfFailed(m_wrappedRenderTargets[n].As(&surface));
+			ThrowIfFailed(m_d2dDeviceContext->CreateBitmapFromDxgiSurface(
+				surface.Get(),
+				&bitmapProperties,
+				&m_d2dRenderTargets[n]
+			));
+		}
+
+		ThrowIfFailed(m_d2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &m_textBrush));
+
+
+		 //User define
+		{
+			ThrowIfFailed(m_dwriteFactory->CreateTextFormat(
+				L"Verdana",
+				NULL,
+				DWRITE_FONT_WEIGHT_NORMAL,
+				DWRITE_FONT_STYLE_NORMAL,
+				DWRITE_FONT_STRETCH_NORMAL,
+				50,
+				L"en-us",
+				&m_textFormat
+			));
+			ThrowIfFailed(m_textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING));
+			ThrowIfFailed(m_textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR));
+			m_textFormat->SetLineSpacing(DWRITE_LINE_SPACING_METHOD_UNIFORM, 100, 100);
 		}
 	}
+
+	void Destroy();
 };
 
 struct SRootSignature
@@ -277,8 +419,8 @@ Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd)
 	for (UINT n = 0; n < FrameCount; ++n)
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = kernel->m_rtvHeap->GetCPUHandle(n);
-		ThrowIfFailed(kernel->m_swapChain->GetBuffer(n, IID_PPV_ARGS(&kernel->m_renderTargets[n]->m_resource)));
-		kernel->m_device->CreateRenderTargetView(kernel->m_renderTargets[n]->m_resource.Get(), nullptr, rtvHandle);
+		ThrowIfFailed(kernel->m_swapChain->GetBuffer(n, IID_PPV_ARGS(&kernel->m_renderTargets[n])));
+		kernel->m_device->CreateRenderTargetView(kernel->m_renderTargets[n].Get(), nullptr, rtvHandle);
 	}
 
 	for (UINT i = 0; i < FrameCount; ++i)
@@ -286,8 +428,11 @@ Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd)
 		ThrowIfFailed(kernel->m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&kernel->m_commandAllocators[i])));
 	}
 	ThrowIfFailed(kernel->m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, kernel->m_commandAllocators[kernel->m_frameIndex].Get(), nullptr, IID_PPV_ARGS(&kernel->m_commandList)));
+	
 	kernel->m_width = width; 
 	kernel->m_height = height;
+	kernel->m_uiLayer = new SUILayer(kernel, hwnd);
+
 	return kernel;
 }
 
@@ -623,18 +768,39 @@ void EndOnInit(Kernel kernel)
 	WaitForGPU(kernel);
 }
 
-void EndOnRender(Kernel kernel)
+void EndOnPictureRender(Kernel kernel)
 {
 	ID3D12CommandList* ppCommandLists[] = { kernel->m_commandList.Get() };
 	kernel->m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+}
+
+void EndOnRender(Kernel kernel)
+{
 	ThrowIfFailed(kernel->m_swapChain->Present(1, 0));
 	MoveToNextFrame(kernel);
 }
 
-void EndOnDestory(Kernel kernel)
+
+void EndOnDestroy(Kernel kernel)
 {
 	WaitForGPU(kernel);
+	kernel->Destroy();
 	CloseHandle(kernel->m_fenceEvent);
+}
+void SKernel::Destroy()
+{
+	m_uiLayer->Destroy();
+}
+void SUILayer::Destroy()
+{
+	m_d2dDevice.Reset();
+	m_d2dDeviceContext.Reset();
+	m_textBrush.Reset();
+	for (UINT n = 0; n < FrameCount; ++n)
+	{
+		m_wrappedRenderTargets[n].Reset();
+		m_d2dRenderTargets[n].Reset();
+	}
 }
 
 void Reset(Kernel kernel, Pipeline pipeline)
@@ -650,7 +816,7 @@ void BeginRender(Kernel kernel, DescriptorHeap dsvHeap, const float* clearColor)
 	D3D12_RECT sr = { 0, 0, static_cast<LONG>(kernel->m_width), static_cast<LONG>(kernel->m_height) };
 	kernel->m_commandList->RSSetViewports(1, &vp);
 	kernel->m_commandList->RSSetScissorRects(1, &sr);
-	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(kernel->m_renderTargets[kernel->m_frameIndex]->m_resource.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(kernel->m_renderTargets[kernel->m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(kernel->m_rtvHeap->GetCPUHandle(kernel->m_frameIndex));
 	if (dsvHeap == nullptr)
@@ -720,8 +886,32 @@ void DrawIndexInstanced(Kernel kernel, UINT StartIndexLocation, UINT IndexCountP
 	kernel->m_commandList->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, 0, StartInstanceLocation);
 }
 
+void RenderText(Kernel kernel)
+{
+	D2D1_SIZE_F rtSize = kernel->m_uiLayer->m_d2dRenderTargets[kernel->m_frameIndex]->GetSize();
+	D2D1_RECT_F textRect = D2D1::RectF(0, 0, rtSize.width, rtSize.height);
+	static const WCHAR text[] = L"11 On 12";
+
+	kernel->m_uiLayer->m_d3d11On12Device->AcquireWrappedResources(kernel->m_uiLayer->m_wrappedRenderTargets[kernel->m_frameIndex].GetAddressOf(), 1);
+
+	kernel->m_uiLayer->m_d2dDeviceContext->SetTarget(kernel->m_uiLayer->m_d2dRenderTargets[kernel->m_frameIndex].Get());
+	kernel->m_uiLayer->m_d2dDeviceContext->BeginDraw();
+	kernel->m_uiLayer->m_d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+	kernel->m_uiLayer->m_d2dDeviceContext->DrawTextW(
+		text,
+		_countof(text) - 1,
+		kernel->m_uiLayer->m_textFormat.Get(),
+		&textRect,
+		kernel->m_uiLayer->m_textBrush.Get()
+	);
+	ThrowIfFailed(kernel->m_uiLayer->m_d2dDeviceContext->EndDraw());
+	kernel->m_uiLayer->m_d3d11On12Device->ReleaseWrappedResources(kernel->m_uiLayer->m_wrappedRenderTargets[kernel->m_frameIndex].GetAddressOf(), 1);
+
+	kernel->m_uiLayer->m_d3d11DeviceContext->Flush();
+}
+
 void EndRender(Kernel kernel)
 {
-	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(kernel->m_renderTargets[kernel->m_frameIndex]->m_resource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(kernel->m_renderTargets[kernel->m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 	ThrowIfFailed(kernel->m_commandList->Close());
 }

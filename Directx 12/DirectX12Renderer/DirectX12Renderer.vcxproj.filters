@@ -39,6 +39,9 @@
     <ClInclude Include="RendererStruct.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
+    <ClInclude Include="Font.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DirectX12Renderer.cpp">

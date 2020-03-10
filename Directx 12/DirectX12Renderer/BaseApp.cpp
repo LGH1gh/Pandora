@@ -103,7 +103,7 @@ void BaseApp::OnInit()
 
     m_depthStencil = CreateDepthStencil(m_kernel);
     m_constantBuffer = CreateConstantBuffer(m_kernel, &m_constantData, sizeof(m_constantData));
-    m_texture = CreateTexture(m_kernel, L"D:\\Pandora\\Directx 12\\x64\\Debug\\braynzar.jpg");
+    m_texture = CreateTexture(m_kernel, L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\timg.jpg");
     EndOnInit(m_kernel);
 }
 
@@ -141,6 +141,9 @@ void BaseApp::OnUpdate()
 void BaseApp::OnRender()
 {
     PopulateCommand();
+    EndOnPictureRender(m_kernel);
+    //AddText(m_kernel, L"11 On 12", );
+    RenderText(m_kernel);
     EndOnRender(m_kernel);
 }
 
@@ -164,5 +167,5 @@ void BaseApp::PopulateCommand()
 
 void BaseApp::OnDestroy()
 {
-    EndOnDestory(m_kernel);
+    EndOnDestroy(m_kernel);
 }
