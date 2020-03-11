@@ -17,7 +17,7 @@ typedef struct SFence* Fence;
 typedef struct SVertexSetup* VertexSetup;
 typedef struct SPipeline* Pipeline;
 typedef struct SUILayer* UILayer;
-
+struct TextBlock;
 
 struct ShaderDesc
 {
@@ -60,11 +60,12 @@ struct FontDesc
     FontWeight FontWeight = FONT_WEIGHT_NORMAL;
     FontStyle FontStyle = FONT_STYLE_NORMAL;
     FontStretch FontStretch = FONT_STRETCH_NORMAL;
+    float FontSize = 50;
     Rect Layout;
     TextAlignment TextAlignment;
     ParagraphAlignment ParagraphAlignment;
-    float lineSpacing;
-    float baseline;
+    float LineSpacing = 50;
+    float Baseline = 50;
 };
 
 
@@ -94,7 +95,7 @@ void Draw(Kernel kernel, UINT StartVertexLocation, UINT VertexCountPerInstance);
 void DrawIndexed(Kernel kernel, UINT StartIndexLocation, UINT IndexCountPerInstance);
 void DrawIndexInstanced(Kernel kernel, UINT StartIndexLocation, UINT IndexCountPerInstance, UINT StartInstanceLocation, UINT InstanceCount);
 void EndRender(Kernel kernel);
-void RenderText(Kernel kernel);
+void RenderText(Kernel kernel, std::vector<FontDesc> texts);
 
 Format TranslateFormatFromWICFormat(WICPixelFormatGUID& wicFormatGUID);
 WICPixelFormatGUID GetConvertToWICFormat(WICPixelFormatGUID& wicFormatGUID);

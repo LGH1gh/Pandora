@@ -104,6 +104,13 @@ void BaseApp::OnInit()
     m_depthStencil = CreateDepthStencil(m_kernel);
     m_constantBuffer = CreateConstantBuffer(m_kernel, &m_constantData, sizeof(m_constantData));
     m_texture = CreateTexture(m_kernel, L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\timg.jpg");
+    
+    FontDesc fontDesc;
+    fontDesc.Content = L"Hello, World";
+    fontDesc.Layout = { 0.f, 0.f, (float)m_width, (float)m_height };
+    fontDesc.TextAlignment = TEXT_ALIGNMENT_LEADING;
+    fontDesc.ParagraphAlignment = PARAGRAPH_ALIGNMENT_NEAR;
+    m_texts.push_back(fontDesc);
     EndOnInit(m_kernel);
 }
 
@@ -142,8 +149,7 @@ void BaseApp::OnRender()
 {
     PopulateCommand();
     EndOnPictureRender(m_kernel);
-    //AddText(m_kernel, L"11 On 12", );
-    RenderText(m_kernel);
+    RenderText(m_kernel, m_texts);
     EndOnRender(m_kernel);
 }
 

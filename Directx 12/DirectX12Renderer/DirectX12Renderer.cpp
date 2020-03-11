@@ -69,13 +69,6 @@ struct SKernel
 
 struct SUILayer
 {
-
-	struct TextBlock
-	{
-		std::wstring text;
-		D2D1_RECT_F layout;
-		ComPtr<IDWriteTextFormat> format;
-	};
 	std::vector<TextBlock> m_textBlock;
 
 	ComPtr<ID3D11DeviceContext> m_d3d11DeviceContext;
@@ -180,7 +173,7 @@ struct SUILayer
 				D3D12_RESOURCE_STATE_PRESENT,
 				IID_PPV_ARGS(&m_wrappedRenderTargets[n])
 			));
-		
+
 			ComPtr<IDXGISurface> surface;
 			ThrowIfFailed(m_wrappedRenderTargets[n].As(&surface));
 			ThrowIfFailed(m_d2dDeviceContext->CreateBitmapFromDxgiSurface(
@@ -191,27 +184,39 @@ struct SUILayer
 		}
 
 		ThrowIfFailed(m_d2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black), &m_textBrush));
-
-
-		 //User define
-		{
-			ThrowIfFailed(m_dwriteFactory->CreateTextFormat(
-				L"Verdana",
-				NULL,
-				DWRITE_FONT_WEIGHT_NORMAL,
-				DWRITE_FONT_STYLE_NORMAL,
-				DWRITE_FONT_STRETCH_NORMAL,
-				50,
-				L"en-us",
-				&m_textFormat
-			));
-			ThrowIfFailed(m_textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING));
-			ThrowIfFailed(m_textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR));
-			m_textFormat->SetLineSpacing(DWRITE_LINE_SPACING_METHOD_UNIFORM, 100, 100);
-		}
 	}
 
 	void Destroy();
+};
+
+struct TextBlock
+{
+	std::wstring content;
+	D2D1_RECT_F layout;
+	ComPtr<IDWriteTextFormat> format;
+	TextBlock(Kernel kernel, FontDesc text)
+	{
+		ThrowIfFailed(kernel->m_uiLayer->m_dwriteFactory->CreateTextFormat(
+			L"Verdana",
+			NULL,
+			(DWRITE_FONT_WEIGHT)text.FontWeight,
+			(DWRITE_FONT_STYLE)text.FontStyle,
+			(DWRITE_FONT_STRETCH)text.FontStretch,
+			text.FontSize,
+			L"en-us",
+			&format
+		));
+		ThrowIfFailed(format->SetTextAlignment((DWRITE_TEXT_ALIGNMENT)text.TextAlignment));
+		ThrowIfFailed(format->SetParagraphAlignment((DWRITE_PARAGRAPH_ALIGNMENT)text.ParagraphAlignment));
+		ThrowIfFailed(format->SetLineSpacing(DWRITE_LINE_SPACING_METHOD_DEFAULT, text.LineSpacing, text.Baseline));
+
+		content = text.Content;
+
+		layout.bottom = text.Layout.bottom;
+		layout.left = text.Layout.left;
+		layout.right = text.Layout.right;
+		layout.top = text.Layout.top;
+	}
 };
 
 struct SRootSignature
@@ -886,24 +891,31 @@ void DrawIndexInstanced(Kernel kernel, UINT StartIndexLocation, UINT IndexCountP
 	kernel->m_commandList->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, 0, StartInstanceLocation);
 }
 
-void RenderText(Kernel kernel)
+void RenderText(Kernel kernel, std::vector<FontDesc> texts)
 {
+	for (auto text : texts)
+	{
+		kernel->m_uiLayer->m_textBlock.push_back(TextBlock(kernel, text));
+	}
+
 	D2D1_SIZE_F rtSize = kernel->m_uiLayer->m_d2dRenderTargets[kernel->m_frameIndex]->GetSize();
-	D2D1_RECT_F textRect = D2D1::RectF(0, 0, rtSize.width, rtSize.height);
-	static const WCHAR text[] = L"11 On 12";
 
 	kernel->m_uiLayer->m_d3d11On12Device->AcquireWrappedResources(kernel->m_uiLayer->m_wrappedRenderTargets[kernel->m_frameIndex].GetAddressOf(), 1);
 
 	kernel->m_uiLayer->m_d2dDeviceContext->SetTarget(kernel->m_uiLayer->m_d2dRenderTargets[kernel->m_frameIndex].Get());
 	kernel->m_uiLayer->m_d2dDeviceContext->BeginDraw();
 	kernel->m_uiLayer->m_d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-	kernel->m_uiLayer->m_d2dDeviceContext->DrawTextW(
-		text,
-		_countof(text) - 1,
-		kernel->m_uiLayer->m_textFormat.Get(),
-		&textRect,
-		kernel->m_uiLayer->m_textBrush.Get()
-	);
+	for (auto text : kernel->m_uiLayer->m_textBlock)
+	{
+		kernel->m_uiLayer->m_d2dDeviceContext->DrawTextW(
+			text.content.c_str(),
+			(UINT32)text.content.size(),
+			text.format.Get(),
+			&text.layout,
+			kernel->m_uiLayer->m_textBrush.Get()
+		);
+	}
+
 	ThrowIfFailed(kernel->m_uiLayer->m_d2dDeviceContext->EndDraw());
 	kernel->m_uiLayer->m_d3d11On12Device->ReleaseWrappedResources(kernel->m_uiLayer->m_wrappedRenderTargets[kernel->m_frameIndex].GetAddressOf(), 1);
 

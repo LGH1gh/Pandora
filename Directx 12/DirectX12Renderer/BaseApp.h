@@ -84,6 +84,8 @@ protected:
 	DescriptorHeap m_constantBuffer;
 	DescriptorHeap m_texture;
 
+	std::vector<FontDesc> m_texts;
+
 	UINT m_width, m_height;
 	std::wstring m_title;
 	HWND m_hwnd;
