@@ -42,6 +42,15 @@
     <ClInclude Include="Font.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
+    <ClInclude Include="NBodyGravity.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleCamera.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="StepTimer.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DirectX12Renderer.cpp">
@@ -56,12 +65,24 @@
     <ClCompile Include="Renderer.cpp">
       <Filter>源文件\utils</Filter>
     </ClCompile>
+    <ClCompile Include="NBodyGravity.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="SimpleCamera.cpp">
+      <Filter>源文件\utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="VertexShader.hlsl">
       <Filter>资源文件</Filter>
     </None>
     <None Include="PixelShader.hlsl">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="ParticleDraw.hlsl">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="nBodyGravityCS.hlsl">
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>

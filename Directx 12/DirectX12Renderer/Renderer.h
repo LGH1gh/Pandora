@@ -11,6 +11,7 @@ static const int FrameCount = 3;
 static const float Color[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 
 typedef struct SKernel* Kernel;
+typedef struct SComputeKernel* ComputeKernel;
 typedef struct SRootSignature* RootSignature;
 typedef struct SDescriptorHeap* DescriptorHeap;
 typedef struct SFence* Fence;
@@ -41,8 +42,8 @@ struct GraphicsPipelineStateDesc
     // UINT SampleMask;
     // RasterizerDesc RasterizerState;
     CullMode CullMode = CULL_MODE_NONE;
-    // BlendDesc BlendState;
-    // DepthStencilDesc DepthStencilState;
+    BlendDesc BlendState = BlendDesc(Default);
+    DepthStencilDesc DepthStencilState = DepthStencilDesc(Default);
     PrimitiveTopologyType PrimitiveTopologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     // UINT NumRenderTargets;
     // Format RTVFormats[8];
@@ -52,6 +53,15 @@ struct GraphicsPipelineStateDesc
     //  D3D12_CACHED_PIPELINE_STATE CachedPSO;
     //  D3D12_PIPELINE_STATE_FLAGS Flags;
     //  D3D12_STREAM_OUTPUT_DESC StreamOutput;
+};
+
+struct ComputePipelineStateDesc
+{
+    RootSignature RootSignature;
+    ShaderDesc CS;
+    UINT NodeMask;
+    CachedPipelineState CachedPSO;
+    PipelineStateFlags Flags;
 };
 
 struct FontDesc
@@ -70,9 +80,11 @@ struct FontDesc
 
 
 Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd);
+ComputeKernel CreateComputeKernel(Kernel kernel);
 RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount = 0, UINT srvCount = 0, UINT uavCount = 0, StaticSampleDesc* staticSampleDesc = nullptr);
 Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphicsPipelineStateDesc);
-VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT vertexSize, UINT vertexBufferStride, const void* pIndexData, UINT indexSize, UINT indexBufferStride);
+Pipeline CreateComputePipeline(Kernel kernel, ComputePipelineStateDesc& computePipelineStateDesc);
+VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT vertexSize, UINT vertexBufferStride, const void* pIndexData = nullptr, UINT indexSize = 0, UINT indexBufferStride = 0);
 
 DescriptorHeap CreateDepthStencil(Kernel kernel);
 DescriptorHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT bufferSize);
@@ -82,9 +94,13 @@ void UpdateConstantBuffer(DescriptorHeap cbvHeap, void* bufferData, UINT bufferS
 void EndOnInit(Kernel kernel);
 void EndOnPictureRender(Kernel kernel);
 void EndOnRender(Kernel kernel);
-void EndOnDestroy(Kernel kernel);
+void EndOnDestroy(Kernel kernel, ComputeKernel computeKernel = nullptr);
+
+void WaitForComputeShader(Kernel kernel, ComputeKernel computeKernel);
+void AsyncComputeAndGraphicsThread(Kernel kernel, ComputeKernel computeKernel);
 
 void Reset(Kernel kernel, Pipeline pipeline);
+void Reset(ComputeKernel computeKernel, Pipeline pipeline);
 void BeginRender(Kernel kernel, DescriptorHeap dsvHeap = nullptr, const float* clearColor = Color);
 void SetGraphicsRootSignature(Kernel kernel, RootSignature rootSignature);
 void SetPipeline(Kernel kernel, Pipeline pipeline);
@@ -100,3 +116,11 @@ void RenderText(Kernel kernel, std::vector<FontDesc> texts);
 Format TranslateFormatFromWICFormat(WICPixelFormatGUID& wicFormatGUID);
 WICPixelFormatGUID GetConvertToWICFormat(WICPixelFormatGUID& wicFormatGUID);
 void LoadImageDataFromFile(ResourceDesc& resourceDesc, SubresourceData& subresourceData, LPCWSTR filename);
+
+DescriptorHeap CreateComputeBuffer(Kernel kernel, void* bufferData, UINT bufferCount, UINT bufferSize);
+void BeginComputeShader(ComputeKernel computeKernel, DescriptorHeap descriptorHeap);
+void SetComputePipeline(ComputeKernel computeKernel, Pipeline pipeline);
+void SetComputeRootSignature(ComputeKernel computeKernel, RootSignature rootSignature);
+void SetComputeBuffer(ComputeKernel computeKernel, DescriptorHeap descriptorHeap);
+void SetConstantBuffer(ComputeKernel computeKernel, DescriptorHeap descriptorHeap);
+void EndComputeShader(ComputeKernel computeKernel, DescriptorHeap descriptorHeap, const UINT dispatch[]);

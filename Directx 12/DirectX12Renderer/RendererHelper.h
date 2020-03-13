@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <intsafe.h>
 #include <windows.h>
+#include <pix.h>
 
 // Note that while ComPtr is used to manage the lifetime of resources on the CPU,
 // it has no understanding of the lifetime of resources on the GPU. Apps must account

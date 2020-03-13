@@ -1,6 +1,6 @@
-#include "BaseApp.h"
+#include "NBodyGravity.h"
 
-extern BaseApp* app = new BaseApp(1080, 720, L"Renderer");
+extern NBodyGravity* app = new NBodyGravity(1080, 720, L"Renderer");
 
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {

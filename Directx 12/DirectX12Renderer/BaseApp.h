@@ -72,6 +72,11 @@ public:
 	HWND GetWindow() { return m_hwnd; }
 
 protected:
+	UINT m_width, m_height;
+	std::wstring m_title;
+	HWND m_hwnd;
+
+private:
 	void PopulateCommand();
 	Kernel m_kernel;
 	RootSignature m_rootSignature;
@@ -85,8 +90,4 @@ protected:
 	DescriptorHeap m_texture;
 
 	std::vector<FontDesc> m_texts;
-
-	UINT m_width, m_height;
-	std::wstring m_title;
-	HWND m_hwnd;
 };

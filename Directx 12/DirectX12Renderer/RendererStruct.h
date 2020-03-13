@@ -100,6 +100,24 @@ enum BlendOp
 } 	BlendOp;
 
 typedef
+enum ColorWriteEnable
+{
+    COLOR_WRITE_ENABLE_RED = 1,
+    COLOR_WRITE_ENABLE_GREEN = 2,
+    COLOR_WRITE_ENABLE_BLUE = 4,
+    COLOR_WRITE_ENABLE_ALPHA = 8,
+    COLOR_WRITE_ENABLE_ALL = (((COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN) | COLOR_WRITE_ENABLE_BLUE) | COLOR_WRITE_ENABLE_ALPHA)
+} 	ColorWriteEnable;
+
+typedef
+enum PipelineStateFlags
+{
+    PIPELINE_STATE_FLAG_NONE = 0,
+    PIPELINE_STATE_FLAG_TOOL_DEBUG = 0x1
+} 	PipelineStateFlags;
+
+
+typedef
 struct RenderTargetBlendDesc
 {
     BlendOp BlendOpAlpha;
@@ -120,6 +138,21 @@ struct BlendDesc
     BOOL AlphaToCoverageEnable;
     BOOL IndependentBlendEnable;
     RenderTargetBlendDesc RenderTarget[8];
+    explicit BlendDesc(DEFAULT)
+    {
+        AlphaToCoverageEnable = FALSE;
+        IndependentBlendEnable = FALSE;
+        const RenderTargetBlendDesc defaultRenderTargetBlendDesc =
+        {
+            BLEND_OP_ADD, LOGIC_OP_NOOP,
+            FALSE,FALSE,
+            BLEND_ONE, BLEND_ZERO, BLEND_OP_ADD,
+            BLEND_ONE, BLEND_ZERO, 
+            COLOR_WRITE_ENABLE_ALL,
+        };
+        for (UINT i = 0; i < 8; ++i)
+            RenderTarget[i] = defaultRenderTargetBlendDesc;
+    }
 }   BlendDesc;
 
 typedef
@@ -417,6 +450,20 @@ typedef struct DepthStencilDesc
     UINT8 StencilWriteMask;
     DepthStencilOpDesc FrontFace;
     DepthStencilOpDesc BackFace;
+    
+    DepthStencilDesc(DEFAULT)
+    {
+        DepthEnable = TRUE;
+        DepthWriteMask = DEPTH_WRITE_MASK_ALL;
+        DepthFunc = COMPARISON_FUNC_LESS;
+        StencilEnable = FALSE;
+        StencilReadMask = 0xff;
+        StencilWriteMask = 0xff;
+        const DepthStencilOpDesc defaultStencilOp =
+        { STENCIL_OP_KEEP, STENCIL_OP_KEEP, STENCIL_OP_KEEP, COMPARISON_FUNC_ALWAYS };
+        FrontFace = defaultStencilOp;
+        BackFace = defaultStencilOp;
+    }
 } 	DepthStencilDesc;
 
 
@@ -581,3 +628,9 @@ struct SubresourceData
     LONG_PTR RowPitch;
     LONG_PTR SlicePitch;
 } 	SubresourceData;
+
+typedef struct CachedPipelineState
+{
+    _Field_size_bytes_full_(CachedBlobSizeInBytes)  const void* pCachedBlob;
+    SIZE_T CachedBlobSizeInBytes;
+} 	CachedPipelineState;

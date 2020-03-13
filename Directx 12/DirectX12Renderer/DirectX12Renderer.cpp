@@ -9,6 +9,7 @@ struct SDescriptorHeap
 	D3D12_GPU_DESCRIPTOR_HANDLE m_gpuDescStart;
 	UINT8* m_pData;
 	size_t m_descSize;
+	ComPtr<ID3D12Resource> m_resource;
 
 	void Init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_FLAGS flags)
 	{
@@ -51,10 +52,11 @@ struct SKernel
 	DescriptorHeap m_rtvHeap;
 	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 
-	UINT m_frameIndex;
-	HANDLE m_fenceEvent;
-	ComPtr<ID3D12Fence> m_fence;
-	UINT64 m_fenceValues[FrameCount];
+	UINT m_frameIndex = 0;
+	ComPtr<ID3D12Fence> m_renderContextFence;
+	UINT64 m_renderContextFenceValue = 0;
+	HANDLE m_renderContextFenceEvent;
+	UINT64 m_frameFenceValues[FrameCount] = {};
 
 	UILayer m_uiLayer;
 
@@ -65,6 +67,19 @@ struct SKernel
 	}
 
 	void Destroy();
+};
+
+struct SComputeKernel
+{
+	ComPtr<ID3D12CommandAllocator> m_computeAllocator;
+	ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
+	ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
+
+	ComPtr<ID3D12Fence> m_threadFence;
+	volatile HANDLE m_threadFenceEvent;
+	volatile UINT64 m_renderContextFenceValue = 0;
+	UINT64 volatile m_threadFenceValue = 0;
+
 };
 
 struct SUILayer
@@ -271,34 +286,30 @@ void GetHardwareAdapter(_In_ IDXGIFactory2* pFactory, _Outptr_result_maybenull_ 
 void WaitForGPU(Kernel kernel)
 {
 	// Schedule a Signal command in the queue.
-	ThrowIfFailed(kernel->m_commandQueue->Signal(kernel->m_fence.Get(), kernel->m_fenceValues[kernel->m_frameIndex]));
+	ThrowIfFailed(kernel->m_commandQueue->Signal(kernel->m_renderContextFence.Get(), kernel->m_renderContextFenceValue));
 
 	// Wait until the fence has been processed.
-	ThrowIfFailed(kernel->m_fence->SetEventOnCompletion(kernel->m_fenceValues[kernel->m_frameIndex], kernel->m_fenceEvent));
-	WaitForSingleObjectEx(kernel->m_fenceEvent, INFINITE, FALSE);
+	ThrowIfFailed(kernel->m_renderContextFence->SetEventOnCompletion(kernel->m_renderContextFenceValue, kernel->m_renderContextFenceEvent));
+	WaitForSingleObjectEx(kernel->m_renderContextFenceEvent, INFINITE, FALSE);
 
 	// Increment the fence value for the current frame.
-	kernel->m_fenceValues[kernel->m_frameIndex]++;
+	kernel->m_renderContextFenceValue++;
 }
 
 void MoveToNextFrame(Kernel kernel)
 {
 	// Schedule a Signal command in the queue.
-	const UINT64 currentFenceValue = kernel->m_fenceValues[kernel->m_frameIndex];
-	ThrowIfFailed(kernel->m_commandQueue->Signal(kernel->m_fence.Get(), currentFenceValue));
+	kernel->m_frameFenceValues[kernel->m_frameIndex] = kernel->m_renderContextFenceValue;
+	ThrowIfFailed(kernel->m_commandQueue->Signal(kernel->m_renderContextFence.Get(), kernel->m_renderContextFenceValue));
+	kernel->m_renderContextFenceValue++;
 
-	// Update the frame index.
 	kernel->m_frameIndex = kernel->m_swapChain->GetCurrentBackBufferIndex();
 
-	// If the next frame is not ready to be rendered yet, wait until it is ready.
-	if (kernel->m_fence->GetCompletedValue() < kernel->m_fenceValues[kernel->m_frameIndex])
+	if (kernel->m_renderContextFence->GetCompletedValue() < kernel->m_frameFenceValues[kernel->m_frameIndex])
 	{
-		ThrowIfFailed(kernel->m_fence->SetEventOnCompletion(kernel->m_fenceValues[kernel->m_frameIndex], kernel->m_fenceEvent));
-		WaitForSingleObjectEx(kernel->m_fenceEvent, INFINITE, FALSE);
+		ThrowIfFailed(kernel->m_renderContextFence->SetEventOnCompletion(kernel->m_frameFenceValues[kernel->m_frameIndex], kernel->m_renderContextFenceEvent));
+		WaitForSingleObject(kernel->m_renderContextFenceEvent, INFINITE);
 	}
-
-	// Set the fence value for the next frame.
-	kernel->m_fenceValues[kernel->m_frameIndex] = currentFenceValue + 1;
 }
 
 D3D12_STATIC_SAMPLER_DESC Translate(StaticSampleDesc* staticSampleDesc)
@@ -344,6 +355,49 @@ D3D12_SUBRESOURCE_DATA Translate(SubresourceData subresourceData)
 	result.SlicePitch = subresourceData.SlicePitch;
 	return result;
 }
+D3D12_BLEND_DESC Translate(BlendDesc blendDesc)
+{
+	D3D12_BLEND_DESC result;
+	result.AlphaToCoverageEnable = blendDesc.AlphaToCoverageEnable;
+	result.IndependentBlendEnable = blendDesc.IndependentBlendEnable;
+	for (UINT i = 0; i < 8; ++i)
+	{
+		result.RenderTarget[i].BlendEnable = blendDesc.RenderTarget[i].BlendEnable;
+		result.RenderTarget[i].LogicOpEnable = blendDesc.RenderTarget[i].LogicOpEnable;
+		result.RenderTarget[i].SrcBlend = (D3D12_BLEND)blendDesc.RenderTarget[i].SrcBlend;
+		result.RenderTarget[i].DestBlend = (D3D12_BLEND)blendDesc.RenderTarget[i].DestBlend;
+		result.RenderTarget[i].BlendOp = (D3D12_BLEND_OP)blendDesc.RenderTarget[i].BlendOp;
+		result.RenderTarget[i].SrcBlendAlpha = (D3D12_BLEND)blendDesc.RenderTarget[i].SrcBlendAlpha;
+		result.RenderTarget[i].DestBlendAlpha = (D3D12_BLEND)blendDesc.RenderTarget[i].DestBlendAlpha;
+		result.RenderTarget[i].BlendOpAlpha = (D3D12_BLEND_OP)blendDesc.RenderTarget[i].BlendOpAlpha;
+		result.RenderTarget[i].LogicOp = (D3D12_LOGIC_OP)blendDesc.RenderTarget[i].LogicOp;
+		result.RenderTarget[i].RenderTargetWriteMask = blendDesc.RenderTarget[i].RenderTargetWriteMask;
+	}
+	return result;
+}
+D3D12_DEPTH_STENCILOP_DESC Translate(DepthStencilOpDesc depthStencilOpDesc)
+{
+	D3D12_DEPTH_STENCILOP_DESC result;
+	result.StencilFailOp = (D3D12_STENCIL_OP)depthStencilOpDesc.StencilFailOp;
+	result.StencilDepthFailOp = (D3D12_STENCIL_OP)depthStencilOpDesc.StencilDepthFailOp;
+	result.StencilPassOp = (D3D12_STENCIL_OP)depthStencilOpDesc.StencilPassOp;
+	result.StencilFunc = (D3D12_COMPARISON_FUNC)depthStencilOpDesc.StencilFunc;
+	return result;
+}
+D3D12_DEPTH_STENCIL_DESC Translate(DepthStencilDesc depthStencilDesc)
+{
+	D3D12_DEPTH_STENCIL_DESC result;
+	result.DepthEnable = depthStencilDesc.DepthEnable;
+	result.DepthWriteMask = (D3D12_DEPTH_WRITE_MASK)depthStencilDesc.DepthWriteMask;
+	result.DepthFunc = (D3D12_COMPARISON_FUNC)depthStencilDesc.DepthFunc;
+	result.StencilEnable = depthStencilDesc.StencilEnable;
+	result.StencilReadMask = depthStencilDesc.StencilReadMask;
+	result.StencilWriteMask = depthStencilDesc.StencilWriteMask;
+	result.FrontFace = Translate(depthStencilDesc.FrontFace);
+	result.BackFace = Translate(depthStencilDesc.BackFace);
+	return result;
+}
+
 
 Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd)
 {
@@ -439,6 +493,23 @@ Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd)
 	kernel->m_uiLayer = new SUILayer(kernel, hwnd);
 
 	return kernel;
+}
+
+ComputeKernel CreateComputeKernel(Kernel kernel)
+{
+	ComputeKernel computeKernel = new SComputeKernel();
+	D3D12_COMMAND_QUEUE_DESC queueDesc = { D3D12_COMMAND_LIST_TYPE_COMPUTE, 0, D3D12_COMMAND_QUEUE_FLAG_NONE };
+	ThrowIfFailed(kernel->m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&computeKernel->m_computeCommandQueue)));
+	ThrowIfFailed(kernel->m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&computeKernel->m_computeAllocator)));
+	ThrowIfFailed(kernel->m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, computeKernel->m_computeAllocator.Get(), nullptr, IID_PPV_ARGS(&computeKernel->m_computeCommandList)));
+	ThrowIfFailed(kernel->m_device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&computeKernel->m_threadFence)));
+	computeKernel->m_threadFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	if (computeKernel->m_threadFenceEvent == nullptr)
+	{
+		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+	}
+	
+	return computeKernel;
 }
 
 RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount, UINT srvCount, UINT uavCount, StaticSampleDesc* staticSampleDesc)
@@ -566,8 +637,9 @@ Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphi
 	psoDesc.RasterizerState.CullMode = (D3D12_CULL_MODE)(graphicsPipelineStateDesc.CullMode);
 	psoDesc.RasterizerState.DepthClipEnable = true;
 	psoDesc.RasterizerState.MultisampleEnable = true;
-	psoDesc.BlendState = XD3D12_BLEND_DESC(D3D12_DEFAULT);
-	psoDesc.DepthStencilState = XD3D12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+
+	psoDesc.BlendState = Translate(graphicsPipelineStateDesc.BlendState);
+	psoDesc.DepthStencilState = Translate(graphicsPipelineStateDesc.DepthStencilState);
 
 	psoDesc.NumRenderTargets = 1;
 	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -579,6 +651,23 @@ Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphi
 	pipeline->m_primitiveTopology = (D3D12_PRIMITIVE_TOPOLOGY)(graphicsPipelineStateDesc.PrimitiveTopologyType + 1);
 	ThrowIfFailed(kernel->m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipeline->m_pipeline)));
 
+	return pipeline;
+}
+
+Pipeline CreateComputePipeline(Kernel kernel, ComputePipelineStateDesc& computePipelineStateDesc)
+{
+	Pipeline pipeline = new SPipeline();
+	D3D12_COMPUTE_PIPELINE_STATE_DESC computePsoDesc = {};
+	computePsoDesc.pRootSignature = computePipelineStateDesc.RootSignature->m_rootSignature.Get();
+	ComPtr<ID3DBlob> computeShader;
+	{
+		ThrowIfFailed(D3DCompileFromFile(
+			computePipelineStateDesc.CS.filePath, nullptr, nullptr,
+			computePipelineStateDesc.CS.entryPoint.c_str(), "cs_5_0",
+			computePipelineStateDesc.CS.flags, 0, &computeShader, nullptr));
+		computePsoDesc.CS = XD3D12_SHADER_BYTECODE(computeShader.Get());
+	}
+	ThrowIfFailed(kernel->m_device->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&pipeline->m_pipeline)));
 	return pipeline;
 }
 
@@ -699,7 +788,7 @@ DescriptorHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT buffer
 	XD3D12_RANGE readRange(0, 0);
 	ThrowIfFailed(constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&cbvHeap->m_pData)));
 	memcpy(cbvHeap->m_pData, bufferData, bufferSize);
-
+	cbvHeap->m_resource = constantBuffer;
 	return cbvHeap;
 }
 
@@ -752,6 +841,7 @@ DescriptorHeap CreateTexture(Kernel kernel, LPCWSTR filename)
 	return texture;
 }
 
+
 void UpdateConstantBuffer(DescriptorHeap cbvHeap, void* bufferData, UINT bufferSize)
 {
 	memcpy(cbvHeap->m_pData, bufferData, bufferSize);
@@ -763,10 +853,10 @@ void EndOnInit(Kernel kernel)
 	ID3D12CommandList* ppCommandLists[] = { kernel->m_commandList.Get() };
 	kernel->m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-	ThrowIfFailed(kernel->m_device->CreateFence(kernel->m_fenceValues[kernel->m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&kernel->m_fence)));
-	kernel->m_fenceValues[kernel->m_frameIndex]++;
-	kernel->m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	if (kernel->m_fenceEvent == nullptr)
+	ThrowIfFailed(kernel->m_device->CreateFence(kernel->m_renderContextFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&kernel->m_renderContextFence)));
+	kernel->m_renderContextFenceValue++;
+	kernel->m_renderContextFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	if (kernel->m_renderContextFenceEvent == nullptr)
 	{
 		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 	}
@@ -786,11 +876,15 @@ void EndOnRender(Kernel kernel)
 }
 
 
-void EndOnDestroy(Kernel kernel)
+void EndOnDestroy(Kernel kernel, ComputeKernel computeKernel)
 {
 	WaitForGPU(kernel);
 	kernel->Destroy();
-	CloseHandle(kernel->m_fenceEvent);
+	CloseHandle(kernel->m_renderContextFenceEvent);
+	if (computeKernel != nullptr)
+	{
+		CloseHandle(computeKernel->m_threadFenceEvent);
+	}
 }
 void SKernel::Destroy()
 {
@@ -812,6 +906,12 @@ void Reset(Kernel kernel, Pipeline pipeline)
 {
 	ThrowIfFailed(kernel->m_commandAllocators[kernel->m_frameIndex]->Reset());
 	ThrowIfFailed(kernel->m_commandList->Reset(kernel->m_commandAllocators[kernel->m_frameIndex].Get(), pipeline->m_pipeline.Get()));
+}
+
+void Reset(ComputeKernel computeKernel, Pipeline pipeline)
+{
+	ThrowIfFailed(computeKernel->m_computeAllocator->Reset());
+	ThrowIfFailed(computeKernel->m_computeCommandList->Reset(computeKernel->m_computeAllocator.Get(), pipeline->m_pipeline.Get()));
 }
 
 void BeginRender(Kernel kernel, DescriptorHeap dsvHeap, const float* clearColor)
@@ -926,4 +1026,122 @@ void EndRender(Kernel kernel)
 {
 	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(kernel->m_renderTargets[kernel->m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 	ThrowIfFailed(kernel->m_commandList->Close());
+}
+
+void AsyncComputeAndGraphicsThread(Kernel kernel, ComputeKernel computeKernel)
+{
+	InterlockedExchange(&computeKernel->m_renderContextFenceValue, kernel->m_renderContextFenceValue);
+	UINT64 threadFenceValue = InterlockedCompareExchange(&computeKernel->m_threadFenceValue, 0, 0);
+	if (computeKernel->m_threadFence->GetCompletedValue() < threadFenceValue)
+	{
+		ThrowIfFailed(kernel->m_commandQueue->Wait(computeKernel->m_threadFence.Get(), threadFenceValue));
+	}
+}
+
+void WaitForComputeShader(Kernel kernel, ComputeKernel computeKernel)
+{
+	ThrowIfFailed(computeKernel->m_computeCommandList->Close());
+	ID3D12CommandList* ppCommandLists[] = { computeKernel->m_computeCommandList.Get() };
+	computeKernel->m_computeCommandQueue->ExecuteCommandLists(1, ppCommandLists);
+
+	UINT64 threadFenceValue = InterlockedIncrement(&computeKernel->m_threadFenceValue);
+	ThrowIfFailed(computeKernel->m_computeCommandQueue->Signal(computeKernel->m_threadFence.Get(), threadFenceValue));
+	ThrowIfFailed(computeKernel->m_threadFence->SetEventOnCompletion(threadFenceValue, computeKernel->m_threadFenceEvent));
+	WaitForSingleObject(computeKernel->m_threadFenceEvent, INFINITE);
+
+	UINT64 renderContextFenceValue = InterlockedCompareExchange(&computeKernel->m_renderContextFenceValue, 0, 0);
+	if (kernel->m_renderContextFence->GetCompletedValue() < renderContextFenceValue)
+	{
+		ThrowIfFailed(computeKernel->m_computeCommandQueue->Wait(kernel->m_renderContextFence.Get(), renderContextFenceValue));
+		InterlockedExchange(&computeKernel->m_renderContextFenceValue, 0);
+	}
+}
+
+DescriptorHeap CreateComputeBuffer(Kernel kernel, void* bufferData, UINT bufferCount, UINT bufferSize)
+{
+	DescriptorHeap srvUavHeap = new SDescriptorHeap();
+	srvUavHeap->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+
+	ID3D12Resource* buffer;
+	ID3D12Resource* bufferUpload;
+	ThrowIfFailed(kernel->m_device->CreateCommittedResource(
+		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&XD3D12_RESOURCE_DESC::Buffer(bufferSize * bufferCount, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(&buffer)
+	));
+
+	ThrowIfFailed(kernel->m_device->CreateCommittedResource(
+		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&XD3D12_RESOURCE_DESC::Buffer(bufferSize * bufferCount),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&bufferUpload)
+	));
+
+	D3D12_SUBRESOURCE_DATA data = { reinterpret_cast<UINT8*>(bufferData), bufferSize* bufferCount, bufferSize* bufferCount };
+	UpdateSubresources<1>(kernel->m_commandList.Get(), buffer, bufferUpload, 0, 0, 1, &data);
+	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	srvDesc.Buffer.FirstElement = 0;
+	srvDesc.Buffer.NumElements = bufferCount;
+	srvDesc.Buffer.StructureByteStride = bufferSize;
+	srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+	kernel->m_device->CreateShaderResourceView(buffer, &srvDesc, srvUavHeap->GetCPUHandle(0));
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	uavDesc.Buffer.FirstElement = 0;
+	uavDesc.Buffer.NumElements = bufferCount;
+	uavDesc.Buffer.StructureByteStride = bufferSize;
+	uavDesc.Buffer.CounterOffsetInBytes = 0;
+	uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+	kernel->m_device->CreateUnorderedAccessView(buffer, nullptr, &uavDesc, srvUavHeap->GetCPUHandle(1));
+	srvUavHeap->m_resource = buffer;
+	return srvUavHeap;
+}
+
+void BeginComputeShader(ComputeKernel computeKernel, DescriptorHeap descriptorHeap)
+{
+	computeKernel->m_computeCommandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(descriptorHeap->m_resource.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+}
+
+void SetComputePipeline(ComputeKernel computeKernel, Pipeline pipeline)
+{
+	computeKernel->m_computeCommandList->SetPipelineState(pipeline->m_pipeline.Get());
+}
+
+void SetComputeRootSignature(ComputeKernel computeKernel, RootSignature rootSignature)
+{
+	computeKernel->m_computeCommandList->SetComputeRootSignature(rootSignature->m_rootSignature.Get());
+}
+
+void SetComputeBuffer(ComputeKernel computeKernel, DescriptorHeap descriptorHeap)
+{
+	ID3D12DescriptorHeap* ppHeaps[] = { descriptorHeap->m_descHeap.Get() };
+	computeKernel->m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	computeKernel->m_computeCommandList->SetComputeRootDescriptorTable(1, descriptorHeap->GetGPUHandle(0));
+	computeKernel->m_computeCommandList->SetComputeRootDescriptorTable(2, descriptorHeap->GetGPUHandle(1));
+}
+
+void SetConstantBuffer(ComputeKernel computeKernel, DescriptorHeap descriptorHeap)
+{
+	ID3D12DescriptorHeap* ppHeaps[] = { descriptorHeap->m_descHeap.Get() };
+	computeKernel->m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	computeKernel->m_computeCommandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUHandle(0));
+}
+
+void EndComputeShader(ComputeKernel computeKernel, DescriptorHeap descriptorHeap, const UINT dispatch[])
+{
+	computeKernel->m_computeCommandList->Dispatch(dispatch[0], dispatch[1], dispatch[2]);
+	computeKernel->m_computeCommandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(descriptorHeap->m_resource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+
 }
