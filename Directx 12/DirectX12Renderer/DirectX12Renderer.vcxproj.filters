@@ -19,6 +19,18 @@
     <Filter Include="头文件\utils">
       <UniqueIdentifier>{66a17ac6-5952-4c12-ae4b-4f56733fb155}</UniqueIdentifier>
     </Filter>
+    <Filter Include="NBodyGravity">
+      <UniqueIdentifier>{89b180f1-a0df-48ae-ba7e-56bc94bbcc39}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NBodyGravity\Assets">
+      <UniqueIdentifier>{3a49d6d2-ca82-4195-ae5f-5de522777c99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MassModel">
+      <UniqueIdentifier>{154e800e-e7b1-4ce5-8be8-ae70b8c0a270}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MassModel\Assets">
+      <UniqueIdentifier>{d707a163-574d-466f-9ae2-09c5544ed4ed}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderer.h">
@@ -30,9 +42,6 @@
     <ClInclude Include="BaseApp.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Math.h">
-      <Filter>头文件\utils</Filter>
-    </ClInclude>
     <ClInclude Include="DirectX12RenderHelper.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
@@ -42,14 +51,26 @@
     <ClInclude Include="Font.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
-    <ClInclude Include="NBodyGravity.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="SimpleCamera.h">
       <Filter>头文件\utils</Filter>
     </ClInclude>
     <ClInclude Include="StepTimer.h">
       <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="NBodyGravity.h">
+      <Filter>NBodyGravity</Filter>
+    </ClInclude>
+    <ClInclude Include="MassModel.h">
+      <Filter>MassModel</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>头文件\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Geometry.h">
+      <Filter>资源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="GeometryPrimitive.h">
+      <Filter>资源文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -65,11 +86,14 @@
     <ClCompile Include="Renderer.cpp">
       <Filter>源文件\utils</Filter>
     </ClCompile>
-    <ClCompile Include="NBodyGravity.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="SimpleCamera.cpp">
       <Filter>源文件\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="NBodyGravity.cpp">
+      <Filter>NBodyGravity</Filter>
+    </ClCompile>
+    <ClCompile Include="MassModel.cpp">
+      <Filter>MassModel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -79,11 +103,18 @@
     <None Include="PixelShader.hlsl">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="ParticleDraw.hlsl">
-      <Filter>资源文件</Filter>
-    </None>
     <None Include="nBodyGravityCS.hlsl">
-      <Filter>资源文件</Filter>
+      <Filter>NBodyGravity\Assets</Filter>
+    </None>
+    <None Include="ParticleDraw.hlsl">
+      <Filter>NBodyGravity\Assets</Filter>
+    </None>
+    <None Include="packages.config" />
+    <None Include="MassModelVertexShader.hlsl">
+      <Filter>MassModel\Assets</Filter>
+    </None>
+    <None Include="MassModelPixelShader.hlsl">
+      <Filter>MassModel\Assets</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -54,6 +54,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\MeshContentTask.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -142,23 +143,28 @@
     <ClInclude Include="BaseApp.h" />
     <ClInclude Include="DirectX12RenderHelper.h" />
     <ClInclude Include="Font.h" />
-    <ClInclude Include="Math.h" />
+    <ClInclude Include="Geometry.h" />
+    <ClInclude Include="MassModel.h" />
     <ClInclude Include="NBodyGravity.h" />
+    <ClInclude Include="GeometryPrimitive.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RendererHelper.h" />
     <ClInclude Include="RendererStruct.h" />
     <ClInclude Include="SimpleCamera.h" />
+    <ClInclude Include="stdafx.h" />
     <ClInclude Include="StepTimer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BaseApp.cpp" />
     <ClCompile Include="DirectX12Renderer.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MassModel.cpp" />
     <ClCompile Include="NBodyGravity.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="SimpleCamera.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="packages.config" />
     <None Include="PixelShader.hlsl">
       <FileType>Document</FileType>
     </None>
@@ -176,7 +182,27 @@
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="MassModelVertexShader.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="MassModelPixelShader.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\directxmesh_desktop_win10.2020.2.15.2\build\native\directxmesh_desktop_win10.targets" Condition="Exists('..\packages\directxmesh_desktop_win10.2020.2.15.2\build\native\directxmesh_desktop_win10.targets')" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\MeshContentTask.targets" />
+    <Import Project="..\packages\directxtk12_desktop_2017.2020.2.24.1\build\native\directxtk12_desktop_2017.targets" Condition="Exists('..\packages\directxtk12_desktop_2017.2020.2.24.1\build\native\directxtk12_desktop_2017.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>这台计算机上缺少此项目引用的 NuGet 程序包。使用“NuGet 程序包还原”可下载这些程序包。有关更多信息，请参见 http://go.microsoft.com/fwlink/?LinkID=322105。缺少的文件是 {0}。</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\directxmesh_desktop_win10.2020.2.15.2\build\native\directxmesh_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxmesh_desktop_win10.2020.2.15.2\build\native\directxmesh_desktop_win10.targets'))" />
+    <Error Condition="!Exists('..\packages\directxtk12_desktop_2017.2020.2.24.1\build\native\directxtk12_desktop_2017.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtk12_desktop_2017.2020.2.24.1\build\native\directxtk12_desktop_2017.targets'))" />
+  </Target>
 </Project>

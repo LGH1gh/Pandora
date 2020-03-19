@@ -67,24 +67,12 @@ private:
 	Pipeline m_computePipelineState;
 	VertexSetup m_vertexSetup;
 
-	DescriptorHeap m_computeBuffer;
-	DescriptorHeap m_constantBufferHeapGS;
+	ResourceHeap m_computeBuffer;
+	ResourceHeap m_constantBufferHeapGS;
 	ConstantBufferGS m_constantBufferGS;
-	DescriptorHeap m_constantBufferHeapCS;
+	ResourceHeap m_constantBufferHeapCS;
 	ConstantBufferCS m_constantBufferCS;
 
-	LONG volatile m_terminating;
-	struct ThreadData
-	{
-		NBodyGravity* pContext;
-	};
-	ThreadData m_threadData;
-	HANDLE m_threadHandle;
-	
-	static DWORD ThreadProc(ThreadData* pData)
-	{
-		return pData->pContext->AsyncComputeThreadProc();
-	}
-	DWORD AsyncComputeThreadProc();
-	void PopulateCommand();
+	void PopulateGraphicsCommand();
+	void PopulateComputeCommand();
 };

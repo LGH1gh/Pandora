@@ -9,8 +9,6 @@
 //
 //*********************************************************
 
-#include "Math.h"
-#include <windows.h>
 #include "SimpleCamera.h"
 
 SimpleCamera::SimpleCamera() :

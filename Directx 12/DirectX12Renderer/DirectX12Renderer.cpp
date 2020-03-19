@@ -2,7 +2,7 @@
 #include "Renderer.h"
 #include "DirectX12RenderHelper.h"
 
-struct SDescriptorHeap
+struct SResourceHeap
 {
 	ComPtr<ID3D12DescriptorHeap> m_descHeap;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_cpuDescStart;
@@ -11,7 +11,7 @@ struct SDescriptorHeap
 	size_t m_descSize;
 	ComPtr<ID3D12Resource> m_resource;
 
-	void Init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_FLAGS flags)
+	void Init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_FLAGS flags, size_t size = -1)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 		desc.NumDescriptors = numDescriptors;
@@ -21,9 +21,10 @@ struct SDescriptorHeap
 
 		m_cpuDescStart = m_descHeap->GetCPUDescriptorHandleForHeapStart();
 		m_gpuDescStart = m_descHeap->GetGPUDescriptorHandleForHeapStart();
-		m_descSize = device->GetDescriptorHandleIncrementSize(type);
-		m_pData = nullptr;
 
+		m_descSize = device->GetDescriptorHandleIncrementSize(type);
+
+		m_pData = nullptr;
 	}
 
 	inline D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle(UINT offset) const
@@ -49,7 +50,7 @@ struct SKernel
 	ComPtr<ID3D12GraphicsCommandList> m_commandList;
 	ComPtr<IDXGISwapChain3> m_swapChain;
 
-	DescriptorHeap m_rtvHeap;
+	ResourceHeap m_rtvHeap;
 	ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 
 	UINT m_frameIndex = 0;
@@ -63,7 +64,7 @@ struct SKernel
 	UINT m_width, m_height;
 	SKernel()
 	{
-		m_rtvHeap = new SDescriptorHeap;
+		m_rtvHeap = new SResourceHeap();
 	}
 
 	void Destroy();
@@ -74,12 +75,6 @@ struct SComputeKernel
 	ComPtr<ID3D12CommandAllocator> m_computeAllocator;
 	ComPtr<ID3D12CommandQueue> m_computeCommandQueue;
 	ComPtr<ID3D12GraphicsCommandList> m_computeCommandList;
-
-	ComPtr<ID3D12Fence> m_threadFence;
-	volatile HANDLE m_threadFenceEvent;
-	volatile UINT64 m_renderContextFenceValue = 0;
-	UINT64 volatile m_threadFenceValue = 0;
-
 };
 
 struct SUILayer
@@ -457,6 +452,8 @@ Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd)
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.SampleDesc.Count = 1;
+	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+
 
 	ComPtr<IDXGISwapChain1> swapChain;
 	ThrowIfFailed(factory->CreateSwapChainForHwnd(
@@ -480,12 +477,10 @@ Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd)
 		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = kernel->m_rtvHeap->GetCPUHandle(n);
 		ThrowIfFailed(kernel->m_swapChain->GetBuffer(n, IID_PPV_ARGS(&kernel->m_renderTargets[n])));
 		kernel->m_device->CreateRenderTargetView(kernel->m_renderTargets[n].Get(), nullptr, rtvHandle);
+		ThrowIfFailed(kernel->m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&kernel->m_commandAllocators[n])));
+
 	}
 
-	for (UINT i = 0; i < FrameCount; ++i)
-	{
-		ThrowIfFailed(kernel->m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&kernel->m_commandAllocators[i])));
-	}
 	ThrowIfFailed(kernel->m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, kernel->m_commandAllocators[kernel->m_frameIndex].Get(), nullptr, IID_PPV_ARGS(&kernel->m_commandList)));
 	
 	kernel->m_width = width; 
@@ -502,12 +497,6 @@ ComputeKernel CreateComputeKernel(Kernel kernel)
 	ThrowIfFailed(kernel->m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&computeKernel->m_computeCommandQueue)));
 	ThrowIfFailed(kernel->m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&computeKernel->m_computeAllocator)));
 	ThrowIfFailed(kernel->m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, computeKernel->m_computeAllocator.Get(), nullptr, IID_PPV_ARGS(&computeKernel->m_computeCommandList)));
-	ThrowIfFailed(kernel->m_device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&computeKernel->m_threadFence)));
-	computeKernel->m_threadFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	if (computeKernel->m_threadFenceEvent == nullptr)
-	{
-		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-	}
 	
 	return computeKernel;
 }
@@ -515,6 +504,17 @@ ComputeKernel CreateComputeKernel(Kernel kernel)
 RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount, UINT srvCount, UINT uavCount, StaticSampleDesc* staticSampleDesc)
 {
 	RootSignature rootSignature = new SRootSignature();
+	
+	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+
+	// This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
+	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+	if (FAILED(kernel->m_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+	{
+		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+	}
+
 	XD3D12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	XD3D12_DESCRIPTOR_RANGE1 tableRanges[3];
 	XD3D12_ROOT_PARAMETER1 rootParameters[3];
@@ -557,7 +557,7 @@ RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount, UINT srvCount, U
 
 	ComPtr<ID3DBlob> signature;
 	ComPtr<ID3DBlob> error;
-	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+	ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
 	ThrowIfFailed(kernel->m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature->m_rootSignature)));
 
 
@@ -734,9 +734,9 @@ VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT verte
 	return vertexSetup;
 }
 
-DescriptorHeap CreateDepthStencil(Kernel kernel)
+ResourceHeap CreateDepthStencilViewHeap(Kernel kernel)
 {
-	DescriptorHeap dsvHeap = new SDescriptorHeap();
+	ResourceHeap dsvHeap = new SResourceHeap();
 	dsvHeap->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
 
 	D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
@@ -764,9 +764,45 @@ DescriptorHeap CreateDepthStencil(Kernel kernel)
 	return dsvHeap;
 }
 
-DescriptorHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT bufferSize)
+ResourceHeap CreateConstantBuffers(Kernel kernel, void* bufferData, UINT bufferSize, UINT bufferCount)
 {
-	DescriptorHeap cbvHeap = new SDescriptorHeap();
+	ResourceHeap cbvHeap = new SResourceHeap;
+	ID3D12Resource* constantBuffer;
+	cbvHeap->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, bufferCount, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+
+	ThrowIfFailed(kernel->m_device->CreateCommittedResource(
+		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&XD3D12_RESOURCE_DESC::Buffer((UINT64)((bufferSize + 255) & ~255) * bufferCount),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&constantBuffer)
+	));
+	XD3D12_RANGE readRange(0, 0);
+	ThrowIfFailed(constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&cbvHeap->m_pData)));
+
+	UINT64 cbvOffset = 0;
+	for (UINT i = 0; i < bufferCount; ++i)
+	{
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = constantBuffer->GetGPUVirtualAddress() + cbvOffset;
+		cbvDesc.SizeInBytes = ((bufferSize + 255) & ~255);
+		cbvOffset += cbvDesc.SizeInBytes;
+		kernel->m_device->CreateConstantBufferView(&cbvDesc, cbvHeap->GetCPUHandle(i));
+	}
+	
+	cbvOffset = 0;
+	for (UINT i = 0; i < bufferCount; ++i)
+	{
+		memcpy(cbvHeap->m_pData + (((bufferSize + 255) & ~255) * i), (char*)bufferData + (bufferSize * i), bufferSize);
+	}
+	cbvHeap->m_resource = constantBuffer;
+	return cbvHeap;
+}
+
+ResourceHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT bufferSize)
+{
+	ResourceHeap cbvHeap = new SResourceHeap();
 	ID3D12Resource* constantBuffer;
 	cbvHeap->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
 	
@@ -783,7 +819,6 @@ DescriptorHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT buffer
 	cbvDesc.BufferLocation = constantBuffer->GetGPUVirtualAddress();
 	cbvDesc.SizeInBytes = (bufferSize + 255) & ~255;
 	kernel->m_device->CreateConstantBufferView(&cbvDesc, cbvHeap->GetCPUHandle(0));
-	ZeroMemory(bufferData, bufferSize);
 
 	XD3D12_RANGE readRange(0, 0);
 	ThrowIfFailed(constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&cbvHeap->m_pData)));
@@ -792,9 +827,9 @@ DescriptorHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT buffer
 	return cbvHeap;
 }
 
-DescriptorHeap CreateTexture(Kernel kernel, LPCWSTR filename)
+ResourceHeap CreateTexture(Kernel kernel, LPCWSTR filename)
 {
-	DescriptorHeap texture = new SDescriptorHeap();
+	ResourceHeap texture = new SResourceHeap();
 	texture->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
 
 	ID3D12Resource* textureBuffer;
@@ -842,31 +877,36 @@ DescriptorHeap CreateTexture(Kernel kernel, LPCWSTR filename)
 }
 
 
-void UpdateConstantBuffer(DescriptorHeap cbvHeap, void* bufferData, UINT bufferSize)
+void UpdateConstantBuffer(ResourceHeap cbvHeap, void* bufferData, UINT bufferSize)
 {
 	memcpy(cbvHeap->m_pData, bufferData, bufferSize);
 }
+
+void UpdateConstantBuffers(ResourceHeap cbvHeap, void* bufferData, UINT bufferSize, UINT bufferCount)
+{
+	for (UINT i = 0; i < bufferCount; ++i)
+	{
+		memcpy(cbvHeap->m_pData + (((bufferSize + 255) & ~255) * i), (char*)bufferData + (bufferSize * i), bufferSize);
+	}
+}
+
 
 void EndOnInit(Kernel kernel)
 {
 	ThrowIfFailed(kernel->m_commandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { kernel->m_commandList.Get() };
 	kernel->m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-	ThrowIfFailed(kernel->m_device->CreateFence(kernel->m_renderContextFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&kernel->m_renderContextFence)));
-	kernel->m_renderContextFenceValue++;
-	kernel->m_renderContextFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	if (kernel->m_renderContextFenceEvent == nullptr)
 	{
-		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+		ThrowIfFailed(kernel->m_device->CreateFence(kernel->m_renderContextFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&kernel->m_renderContextFence)));
+		kernel->m_renderContextFenceValue++;
+		
+		kernel->m_renderContextFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+		if (kernel->m_renderContextFenceEvent == nullptr)
+		{
+			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+		}
+		WaitForGPU(kernel);
 	}
-	WaitForGPU(kernel);
-}
-
-void EndOnPictureRender(Kernel kernel)
-{
-	ID3D12CommandList* ppCommandLists[] = { kernel->m_commandList.Get() };
-	kernel->m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 }
 
 void EndOnRender(Kernel kernel)
@@ -876,15 +916,11 @@ void EndOnRender(Kernel kernel)
 }
 
 
-void EndOnDestroy(Kernel kernel, ComputeKernel computeKernel)
+void EndOnDestroy(Kernel kernel)
 {
 	WaitForGPU(kernel);
 	kernel->Destroy();
 	CloseHandle(kernel->m_renderContextFenceEvent);
-	if (computeKernel != nullptr)
-	{
-		CloseHandle(computeKernel->m_threadFenceEvent);
-	}
 }
 void SKernel::Destroy()
 {
@@ -914,7 +950,7 @@ void Reset(ComputeKernel computeKernel, Pipeline pipeline)
 	ThrowIfFailed(computeKernel->m_computeCommandList->Reset(computeKernel->m_computeAllocator.Get(), pipeline->m_pipeline.Get()));
 }
 
-void BeginRender(Kernel kernel, DescriptorHeap dsvHeap, const float* clearColor)
+void BeginPopulateGraphicsCommand(Kernel kernel, ResourceHeap dsvHeap, const float* clearColor)
 {
 
 	D3D12_VIEWPORT vp = { 0.0f, 0.0f, static_cast<float>(kernel->m_width), static_cast<float>(kernel->m_height), 0.0f, 1.0f };
@@ -962,14 +998,29 @@ void SetVertexSetup(Kernel kernel, VertexSetup vertexSetup)
 	
 }
 
-void SetConstantBuffer(Kernel kernel, DescriptorHeap heap)
+void SetDescriptorHeaps(Kernel kernel, std::vector<ResourceHeap> heaps)
+{
+	std::vector<ID3D12DescriptorHeap*> ppHeaps;
+	for (auto heap : heaps)
+	{
+		ppHeaps.push_back(heap->m_descHeap.Get());
+	}
+	kernel->m_commandList->SetDescriptorHeaps(ppHeaps.size(), &ppHeaps[0]);
+}
+
+void SetConstantBuffer(Kernel kernel, ResourceHeap heap)
 {
 	ID3D12DescriptorHeap* descriptorHeaps[] = { heap->m_descHeap.Get() };
 	kernel->m_commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 	kernel->m_commandList->SetGraphicsRootDescriptorTable(0, heap->GetGPUHandle(0));
 }
 
-void SetShaderResource(Kernel kernel, DescriptorHeap heap)
+void SetConstantBuffer(Kernel kernel, ResourceHeap heap, UINT index)
+{
+	kernel->m_commandList->SetGraphicsRootDescriptorTable(0, heap->GetGPUHandle(index));
+}
+
+void SetShaderResource(Kernel kernel, ResourceHeap heap)
 {
 	ID3D12DescriptorHeap* descriptorHeaps[] = { heap->m_descHeap.Get() };
 	kernel->m_commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
@@ -1022,44 +1073,15 @@ void RenderText(Kernel kernel, std::vector<FontDesc> texts)
 	kernel->m_uiLayer->m_d3d11DeviceContext->Flush();
 }
 
-void EndRender(Kernel kernel)
+void EndPopulateGraphicsCommand(Kernel kernel)
 {
 	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(kernel->m_renderTargets[kernel->m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 	ThrowIfFailed(kernel->m_commandList->Close());
 }
 
-void AsyncComputeAndGraphicsThread(Kernel kernel, ComputeKernel computeKernel)
+ResourceHeap CreateComputeBuffer(Kernel kernel, void* bufferData, UINT bufferCount, UINT bufferSize)
 {
-	InterlockedExchange(&computeKernel->m_renderContextFenceValue, kernel->m_renderContextFenceValue);
-	UINT64 threadFenceValue = InterlockedCompareExchange(&computeKernel->m_threadFenceValue, 0, 0);
-	if (computeKernel->m_threadFence->GetCompletedValue() < threadFenceValue)
-	{
-		ThrowIfFailed(kernel->m_commandQueue->Wait(computeKernel->m_threadFence.Get(), threadFenceValue));
-	}
-}
-
-void WaitForComputeShader(Kernel kernel, ComputeKernel computeKernel)
-{
-	ThrowIfFailed(computeKernel->m_computeCommandList->Close());
-	ID3D12CommandList* ppCommandLists[] = { computeKernel->m_computeCommandList.Get() };
-	computeKernel->m_computeCommandQueue->ExecuteCommandLists(1, ppCommandLists);
-
-	UINT64 threadFenceValue = InterlockedIncrement(&computeKernel->m_threadFenceValue);
-	ThrowIfFailed(computeKernel->m_computeCommandQueue->Signal(computeKernel->m_threadFence.Get(), threadFenceValue));
-	ThrowIfFailed(computeKernel->m_threadFence->SetEventOnCompletion(threadFenceValue, computeKernel->m_threadFenceEvent));
-	WaitForSingleObject(computeKernel->m_threadFenceEvent, INFINITE);
-
-	UINT64 renderContextFenceValue = InterlockedCompareExchange(&computeKernel->m_renderContextFenceValue, 0, 0);
-	if (kernel->m_renderContextFence->GetCompletedValue() < renderContextFenceValue)
-	{
-		ThrowIfFailed(computeKernel->m_computeCommandQueue->Wait(kernel->m_renderContextFence.Get(), renderContextFenceValue));
-		InterlockedExchange(&computeKernel->m_renderContextFenceValue, 0);
-	}
-}
-
-DescriptorHeap CreateComputeBuffer(Kernel kernel, void* bufferData, UINT bufferCount, UINT bufferSize)
-{
-	DescriptorHeap srvUavHeap = new SDescriptorHeap();
+	ResourceHeap srvUavHeap = new SResourceHeap();
 	srvUavHeap->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
 
 	ID3D12Resource* buffer;
@@ -1109,7 +1131,7 @@ DescriptorHeap CreateComputeBuffer(Kernel kernel, void* bufferData, UINT bufferC
 	return srvUavHeap;
 }
 
-void BeginComputeShader(ComputeKernel computeKernel, DescriptorHeap descriptorHeap)
+void BeginPopulateComputeCommand(ComputeKernel computeKernel, ResourceHeap descriptorHeap)
 {
 	computeKernel->m_computeCommandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(descriptorHeap->m_resource.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 }
@@ -1124,7 +1146,7 @@ void SetComputeRootSignature(ComputeKernel computeKernel, RootSignature rootSign
 	computeKernel->m_computeCommandList->SetComputeRootSignature(rootSignature->m_rootSignature.Get());
 }
 
-void SetComputeBuffer(ComputeKernel computeKernel, DescriptorHeap descriptorHeap)
+void SetComputeBuffer(ComputeKernel computeKernel, ResourceHeap descriptorHeap)
 {
 	ID3D12DescriptorHeap* ppHeaps[] = { descriptorHeap->m_descHeap.Get() };
 	computeKernel->m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -1132,16 +1154,28 @@ void SetComputeBuffer(ComputeKernel computeKernel, DescriptorHeap descriptorHeap
 	computeKernel->m_computeCommandList->SetComputeRootDescriptorTable(2, descriptorHeap->GetGPUHandle(1));
 }
 
-void SetConstantBuffer(ComputeKernel computeKernel, DescriptorHeap descriptorHeap)
+void SetConstantBuffer(ComputeKernel computeKernel, ResourceHeap descriptorHeap)
 {
 	ID3D12DescriptorHeap* ppHeaps[] = { descriptorHeap->m_descHeap.Get() };
 	computeKernel->m_computeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 	computeKernel->m_computeCommandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUHandle(0));
 }
 
-void EndComputeShader(ComputeKernel computeKernel, DescriptorHeap descriptorHeap, const UINT dispatch[])
+void EndPopulateComputeCommand(ComputeKernel computeKernel, ResourceHeap descriptorHeap, const UINT dispatch[])
 {
 	computeKernel->m_computeCommandList->Dispatch(dispatch[0], dispatch[1], dispatch[2]);
 	computeKernel->m_computeCommandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(descriptorHeap->m_resource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+	ThrowIfFailed(computeKernel->m_computeCommandList->Close());
 
+}
+
+void ExecuteCommand(Kernel kernel)
+{
+	ID3D12CommandList* ppCommandLists[] = { kernel->m_commandList.Get() };
+	kernel->m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+}
+void ExecuteCommand(ComputeKernel computeKernel)
+{
+	ID3D12CommandList* ppCommandLists[] = { computeKernel->m_computeCommandList.Get() };
+	computeKernel->m_computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 }

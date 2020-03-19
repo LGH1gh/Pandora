@@ -85,9 +85,9 @@ private:
 	ConstantBuffer m_constantData;
 	Coordinate m_coordinate;
 
-	DescriptorHeap m_depthStencil;
-	DescriptorHeap m_constantBuffer;
-	DescriptorHeap m_texture;
+	ResourceHeap m_depthStencil;
+	ResourceHeap m_constantBuffer;
+	ResourceHeap m_texture;
 
 	std::vector<FontDesc> m_texts;
 };

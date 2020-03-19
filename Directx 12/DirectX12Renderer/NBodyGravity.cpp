@@ -5,7 +5,6 @@ const float NBodyGravity::ParticleSpread = 400.0f;
 NBodyGravity::NBodyGravity(UINT width, UINT height, std::wstring title) :
 	BaseApp(width, height, title)
 {
-	m_terminating = 0;
 }
 
 void NBodyGravity::OnInit()
@@ -41,7 +40,7 @@ void NBodyGravity::OnInit()
 
 	ComputePipelineStateDesc computePsoDesc;
 	computePsoDesc.RootSignature = m_computeRootSignature;
-	computePsoDesc.CS = ShaderDesc(L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\nBodyGravityCS.hlsl", "CSMain", compileFlags);
+	computePsoDesc.CS = ShaderDesc(L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\NBodyGravityCS.hlsl", "CSMain", compileFlags);
 	m_computePipelineState = CreateComputePipeline(m_kernel, computePsoDesc);
 	
 	LoadData();
@@ -52,18 +51,6 @@ void NBodyGravity::OnInit()
 	m_constantBufferCS.paramf[1] = 1.0f;
 	m_constantBufferHeapCS = CreateConstantBuffer(m_kernel, &m_constantBufferCS, sizeof(ConstantBufferCS));
 	m_constantBufferHeapGS = CreateConstantBuffer(m_kernel, &m_constantBufferGS, sizeof(ConstantBufferGS));
-
-	m_threadData.pContext = this;
-	m_threadHandle = CreateThread(
-		nullptr,
-		0,
-		reinterpret_cast<LPTHREAD_START_ROUTINE>(ThreadProc),
-		reinterpret_cast<void*>(&m_threadData),
-		CREATE_SUSPENDED,
-		nullptr
-	);
-
-	ResumeThread(m_threadHandle);
 
 	EndOnInit(m_kernel);
 }
@@ -136,17 +123,16 @@ void NBodyGravity::OnUpdate()
 
 void NBodyGravity::OnRender()
 {
-	AsyncComputeAndGraphicsThread(m_kernel, m_computeKernel);
-	PopulateCommand();
-	EndOnPictureRender(m_kernel);
+	PopulateComputeCommand();
+	PopulateGraphicsCommand();
 	EndOnRender(m_kernel);
 }
 
-void NBodyGravity::PopulateCommand()
+void NBodyGravity::PopulateGraphicsCommand()
 {
 	Reset(m_kernel, m_pipelineState);
 	const float clearColor[] = { 0.0f, 0.0f, 0.1f, 0.0f };
-	BeginRender(m_kernel, nullptr, clearColor);
+	BeginPopulateGraphicsCommand(m_kernel, nullptr, clearColor);
 	{
 		SetPipeline(m_kernel, m_pipelineState);
 		SetGraphicsRootSignature(m_kernel, m_rootSignature);
@@ -155,36 +141,31 @@ void NBodyGravity::PopulateCommand()
 		SetVertexSetup(m_kernel, m_vertexSetup);
 		Draw(m_kernel, 0, ParticleCount);
 	}
-	EndRender(m_kernel);
+	EndPopulateGraphicsCommand(m_kernel);
+	ExecuteCommand(m_kernel);
 }
 
-DWORD NBodyGravity::AsyncComputeThreadProc()
+void NBodyGravity::PopulateComputeCommand()
 {
-	while (0 == InterlockedCompareExchange(&m_terminating, 0, 0))
-	{
-		Simulate();
-		WaitForComputeShader(m_kernel, m_computeKernel);
-		Reset(m_computeKernel, m_computePipelineState);
-	}
-	return 0;
+	Simulate();
+	Reset(m_computeKernel, m_computePipelineState);
 }
 
 void NBodyGravity::Simulate()
 {
-	BeginComputeShader(m_computeKernel, m_computeBuffer);
+	BeginPopulateComputeCommand(m_computeKernel, m_computeBuffer);
 	{
 		SetComputePipeline(m_computeKernel, m_computePipelineState);
 		SetComputeRootSignature(m_computeKernel, m_computeRootSignature);
-		SetComputeBuffer(m_computeKernel, m_computeBuffer);
 		SetConstantBuffer(m_computeKernel, m_constantBufferHeapCS);
+		SetComputeBuffer(m_computeKernel, m_computeBuffer);
 	}
 	const UINT dispatch[] = { ParticleCount / 128, 1, 1 };
-	EndComputeShader(m_computeKernel, m_computeBuffer, dispatch);
+	EndPopulateComputeCommand(m_computeKernel, m_computeBuffer, dispatch);
+	ExecuteCommand(m_computeKernel);
 }
 
 void NBodyGravity::OnDestroy()
 {
-	InterlockedExchange(&m_terminating, 1);
-	CloseHandle(m_threadHandle);
-	EndOnDestroy(m_kernel, m_computeKernel);
+	EndOnDestroy(m_kernel);
 }

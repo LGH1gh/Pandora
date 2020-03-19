@@ -10,6 +10,7 @@
 #include <dwrite.h>
 #include <d3d11on12.h>
 
+#include <fstream>
 #include <memory>
 
 #pragma comment ( lib, "d2d1.lib" )
@@ -21,7 +22,7 @@
 #pragma comment ( lib, "dwrite.lib" )
 
 
-using namespace DirectX;
+
 using Microsoft::WRL::ComPtr;
 
 struct XD3D12_DEFAULT {};

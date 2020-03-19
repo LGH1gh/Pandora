@@ -12,8 +12,7 @@
 //*********************************************************
 
 #pragma once
-
-using namespace DirectX;
+#include"stdafx.h"
 
 class SimpleCamera
 {

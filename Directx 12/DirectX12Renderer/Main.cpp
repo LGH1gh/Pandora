@@ -1,6 +1,6 @@
-#include "NBodyGravity.h"
+#include "MassModel.h"
 
-extern NBodyGravity* app = new NBodyGravity(1080, 720, L"Renderer");
+extern MassModel* app = new MassModel(1080, 720, L"Renderer");
 
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {

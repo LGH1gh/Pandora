@@ -1,7 +1,5 @@
 #pragma once
-#include <wincodec.h>
-
-#include "Math.h"
+#include "stdafx.h"
 #include "Font.h"
 #include "RendererHelper.h"
 #include "RendererStruct.h"
@@ -13,7 +11,7 @@ static const float Color[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 typedef struct SKernel* Kernel;
 typedef struct SComputeKernel* ComputeKernel;
 typedef struct SRootSignature* RootSignature;
-typedef struct SDescriptorHeap* DescriptorHeap;
+typedef struct SResourceHeap* ResourceHeap;
 typedef struct SFence* Fence;
 typedef struct SVertexSetup* VertexSetup;
 typedef struct SPipeline* Pipeline;
@@ -86,41 +84,43 @@ Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphi
 Pipeline CreateComputePipeline(Kernel kernel, ComputePipelineStateDesc& computePipelineStateDesc);
 VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT vertexSize, UINT vertexBufferStride, const void* pIndexData = nullptr, UINT indexSize = 0, UINT indexBufferStride = 0);
 
-DescriptorHeap CreateDepthStencil(Kernel kernel);
-DescriptorHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT bufferSize);
-DescriptorHeap CreateTexture(Kernel kernel, LPCWSTR filename);
-void UpdateConstantBuffer(DescriptorHeap cbvHeap, void* bufferData, UINT bufferSize);
+ResourceHeap CreateDepthStencilViewHeap(Kernel kernel);
+ResourceHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT bufferSize);
+ResourceHeap CreateConstantBuffers(Kernel kernel, void* bufferData, UINT bufferSize, UINT bufferCount);
+ResourceHeap CreateTexture(Kernel kernel, LPCWSTR filename);
+void UpdateConstantBuffer(ResourceHeap cbvHeap, void* bufferData, UINT bufferSize);
+void UpdateConstantBuffers(ResourceHeap cbvHeap, void* bufferData, UINT bufferSize, UINT bufferCount);
 
 void EndOnInit(Kernel kernel);
-void EndOnPictureRender(Kernel kernel);
 void EndOnRender(Kernel kernel);
-void EndOnDestroy(Kernel kernel, ComputeKernel computeKernel = nullptr);
-
-void WaitForComputeShader(Kernel kernel, ComputeKernel computeKernel);
-void AsyncComputeAndGraphicsThread(Kernel kernel, ComputeKernel computeKernel);
+void EndOnDestroy(Kernel kernel);
 
 void Reset(Kernel kernel, Pipeline pipeline);
 void Reset(ComputeKernel computeKernel, Pipeline pipeline);
-void BeginRender(Kernel kernel, DescriptorHeap dsvHeap = nullptr, const float* clearColor = Color);
+void BeginPopulateGraphicsCommand(Kernel kernel, ResourceHeap dsvHeap = nullptr, const float* clearColor = Color);
 void SetGraphicsRootSignature(Kernel kernel, RootSignature rootSignature);
 void SetPipeline(Kernel kernel, Pipeline pipeline);
 void SetVertexSetup(Kernel kernel, VertexSetup vertexSetup);
-void SetConstantBuffer(Kernel kernel, DescriptorHeap heap);
-void SetShaderResource(Kernel kernel, DescriptorHeap heap);
+void SetDescriptorHeaps(Kernel, std::vector<ResourceHeap>);
+void SetConstantBuffer(Kernel kernel, ResourceHeap heap);
+void SetConstantBuffer(Kernel kernel, ResourceHeap heap, UINT index);
+void SetShaderResource(Kernel kernel, ResourceHeap heap);
 void Draw(Kernel kernel, UINT StartVertexLocation, UINT VertexCountPerInstance);
 void DrawIndexed(Kernel kernel, UINT StartIndexLocation, UINT IndexCountPerInstance);
 void DrawIndexInstanced(Kernel kernel, UINT StartIndexLocation, UINT IndexCountPerInstance, UINT StartInstanceLocation, UINT InstanceCount);
-void EndRender(Kernel kernel);
+void EndPopulateGraphicsCommand(Kernel kernel);
 void RenderText(Kernel kernel, std::vector<FontDesc> texts);
 
 Format TranslateFormatFromWICFormat(WICPixelFormatGUID& wicFormatGUID);
 WICPixelFormatGUID GetConvertToWICFormat(WICPixelFormatGUID& wicFormatGUID);
 void LoadImageDataFromFile(ResourceDesc& resourceDesc, SubresourceData& subresourceData, LPCWSTR filename);
 
-DescriptorHeap CreateComputeBuffer(Kernel kernel, void* bufferData, UINT bufferCount, UINT bufferSize);
-void BeginComputeShader(ComputeKernel computeKernel, DescriptorHeap descriptorHeap);
+ResourceHeap CreateComputeBuffer(Kernel kernel, void* bufferData, UINT bufferCount, UINT bufferSize);
+void BeginPopulateComputeCommand(ComputeKernel computeKernel, ResourceHeap descriptorHeap);
 void SetComputePipeline(ComputeKernel computeKernel, Pipeline pipeline);
 void SetComputeRootSignature(ComputeKernel computeKernel, RootSignature rootSignature);
-void SetComputeBuffer(ComputeKernel computeKernel, DescriptorHeap descriptorHeap);
-void SetConstantBuffer(ComputeKernel computeKernel, DescriptorHeap descriptorHeap);
-void EndComputeShader(ComputeKernel computeKernel, DescriptorHeap descriptorHeap, const UINT dispatch[]);
+void SetComputeBuffer(ComputeKernel computeKernel, ResourceHeap descriptorHeap);
+void SetConstantBuffer(ComputeKernel computeKernel, ResourceHeap descriptorHeap);
+void EndPopulateComputeCommand(ComputeKernel computeKernel, ResourceHeap descriptorHeap, const UINT dispatch[]);
+void ExecuteCommand(Kernel kernel);
+void ExecuteCommand(ComputeKernel computeKernel);

@@ -101,7 +101,7 @@ void BaseApp::OnInit()
         triangleVertices, sizeof(triangleVertices), sizeof(Vertex),
         indices, sizeof(indices), sizeof(DWORD));
 
-    m_depthStencil = CreateDepthStencil(m_kernel);
+    m_depthStencil = CreateDepthStencilViewHeap(m_kernel);
     m_constantBuffer = CreateConstantBuffer(m_kernel, &m_constantData, sizeof(m_constantData));
     m_texture = CreateTexture(m_kernel, L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\timg.jpg");
     
@@ -148,7 +148,6 @@ void BaseApp::OnUpdate()
 void BaseApp::OnRender()
 {
     PopulateCommand();
-    EndOnPictureRender(m_kernel);
     RenderText(m_kernel, m_texts);
     EndOnRender(m_kernel);
 }
@@ -157,7 +156,7 @@ void BaseApp::PopulateCommand()
 {
     Reset(m_kernel, m_pipeline);
 
-    BeginRender(m_kernel, m_depthStencil);
+    BeginPopulateGraphicsCommand(m_kernel, m_depthStencil);
     {
         SetGraphicsRootSignature(m_kernel, m_rootSignature);
         SetPipeline(m_kernel, m_pipeline);;
@@ -166,9 +165,9 @@ void BaseApp::PopulateCommand()
         SetShaderResource(m_kernel, m_texture);
 
         DrawIndexed(m_kernel, 0, 36);
-
     }
-    EndRender(m_kernel);
+    EndPopulateGraphicsCommand(m_kernel);
+    ExecuteCommand(m_kernel);
 }
 
 void BaseApp::OnDestroy()
