@@ -16,7 +16,7 @@ BaseApp::~BaseApp()
 void BaseApp::OnInit()
 {
     m_kernel = CreateKernel(m_width, m_height, false, m_hwnd);
-    m_rootSignature = CreateRootSignature(m_kernel, 1, 1, 0, &StaticSampleDesc::Init(Default));
+    m_rootSignature = CreateRootSignature(m_kernel, 1, 1, 0);
 
     UINT compileFlags = COMPILE_DEBUG | COMPILE_SKIP_OPTIMIZATION;
     InputElementDesc inputElementDesc[] =
@@ -112,16 +112,6 @@ void BaseApp::OnInit()
     fontDesc.ParagraphAlignment = PARAGRAPH_ALIGNMENT_NEAR;
     m_texts.push_back(fontDesc);
     EndOnInit(m_kernel);
-}
-
-XMFLOAT4 Calculate(XMFLOAT4X4 matrix, XMFLOAT4 vector)
-{
-    XMFLOAT4 result;
-    result.x = matrix._11 * vector.x + matrix._12 * vector.y + matrix._13 * vector.z + matrix._14 * vector.w;
-    result.y = matrix._21 * vector.x + matrix._22 * vector.y + matrix._23 * vector.z + matrix._24 * vector.w;
-    result.z = matrix._31 * vector.x + matrix._32 * vector.y + matrix._33 * vector.z + matrix._34 * vector.w;
-    result.w = matrix._41 * vector.x + matrix._42 * vector.y + matrix._43 * vector.z + matrix._44 * vector.w;
-    return result;
 }
 
 void BaseApp::OnUpdate()

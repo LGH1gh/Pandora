@@ -1,6 +1,6 @@
-#include "MassModel.h"
+#include "GlassModel.h"
 
-extern MassModel* app = new MassModel(1080, 720, L"Renderer");
+extern GlassModel* app = new GlassModel(1080, 720, L"Renderer");
 
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {

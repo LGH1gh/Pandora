@@ -31,6 +31,12 @@
     <Filter Include="MassModel\Assets">
       <UniqueIdentifier>{d707a163-574d-466f-9ae2-09c5544ed4ed}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GlassModel">
+      <UniqueIdentifier>{ef183818-9a74-483c-9d63-a887d304a4bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GlassModel\Assets">
+      <UniqueIdentifier>{17b475e0-4287-4927-8943-3f680b58362a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderer.h">
@@ -69,7 +75,10 @@
     <ClInclude Include="Geometry.h">
       <Filter>资源文件</Filter>
     </ClInclude>
-    <ClInclude Include="GeometryPrimitive.h">
+    <ClInclude Include="GlassModel.h">
+      <Filter>GlassModel</Filter>
+    </ClInclude>
+    <ClInclude Include="Geometry.cpp">
       <Filter>资源文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -95,6 +104,9 @@
     <ClCompile Include="MassModel.cpp">
       <Filter>MassModel</Filter>
     </ClCompile>
+    <ClCompile Include="GlassModel.cpp">
+      <Filter>GlassModel</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="VertexShader.hlsl">
@@ -115,6 +127,18 @@
     </None>
     <None Include="MassModelPixelShader.hlsl">
       <Filter>MassModel\Assets</Filter>
+    </None>
+    <None Include="SkyboxVertexShader.hlsl">
+      <Filter>GlassModel\Assets</Filter>
+    </None>
+    <None Include="GlassModelPixelShader.hlsl">
+      <Filter>GlassModel\Assets</Filter>
+    </None>
+    <None Include="GlassModelVertexShader.hlsl">
+      <Filter>GlassModel\Assets</Filter>
+    </None>
+    <None Include="SkyboxPixelShader.hlsl">
+      <Filter>GlassModel\Assets</Filter>
     </None>
   </ItemGroup>
 </Project>

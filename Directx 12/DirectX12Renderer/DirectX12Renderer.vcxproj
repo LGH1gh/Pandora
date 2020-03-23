@@ -93,6 +93,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <StackReserveSize>268435456</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -144,9 +145,10 @@
     <ClInclude Include="DirectX12RenderHelper.h" />
     <ClInclude Include="Font.h" />
     <ClInclude Include="Geometry.h" />
+    <ClInclude Include="GlassModel.h" />
     <ClInclude Include="MassModel.h" />
     <ClInclude Include="NBodyGravity.h" />
-    <ClInclude Include="GeometryPrimitive.h" />
+    <ClInclude Include="Geometry.cpp" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RendererHelper.h" />
     <ClInclude Include="RendererStruct.h" />
@@ -157,6 +159,7 @@
   <ItemGroup>
     <ClCompile Include="BaseApp.cpp" />
     <ClCompile Include="DirectX12Renderer.cpp" />
+    <ClCompile Include="GlassModel.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MassModel.cpp" />
     <ClCompile Include="NBodyGravity.cpp" />
@@ -192,11 +195,26 @@
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="GlassModelPixelShader.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="GlassModelVertexShader.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="SkyboxPixelShader.hlsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="SkyboxVertexShader.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\packages\directxmesh_desktop_win10.2020.2.15.2\build\native\directxmesh_desktop_win10.targets" Condition="Exists('..\packages\directxmesh_desktop_win10.2020.2.15.2\build\native\directxmesh_desktop_win10.targets')" />
     <Import Project="$(VCTargetsPath)\BuildCustomizations\MeshContentTask.targets" />
     <Import Project="..\packages\directxtk12_desktop_2017.2020.2.24.1\build\native\directxtk12_desktop_2017.targets" Condition="Exists('..\packages\directxtk12_desktop_2017.2020.2.24.1\build\native\directxtk12_desktop_2017.targets')" />
+    <Import Project="..\packages\directxtex_desktop_win10.2020.2.15.1\build\native\directxtex_desktop_win10.targets" Condition="Exists('..\packages\directxtex_desktop_win10.2020.2.15.1\build\native\directxtex_desktop_win10.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -204,5 +222,6 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\directxmesh_desktop_win10.2020.2.15.2\build\native\directxmesh_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxmesh_desktop_win10.2020.2.15.2\build\native\directxmesh_desktop_win10.targets'))" />
     <Error Condition="!Exists('..\packages\directxtk12_desktop_2017.2020.2.24.1\build\native\directxtk12_desktop_2017.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtk12_desktop_2017.2020.2.24.1\build\native\directxtk12_desktop_2017.targets'))" />
+    <Error Condition="!Exists('..\packages\directxtex_desktop_win10.2020.2.15.1\build\native\directxtex_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtex_desktop_win10.2020.2.15.1\build\native\directxtex_desktop_win10.targets'))" />
   </Target>
 </Project>

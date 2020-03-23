@@ -1,5 +1,4 @@
 #include "MassModel.h"
-#include "GeometryPrimitive.h"
 
 MassModel::MassModel(UINT width, UINT height, std::wstring title) :
 	BaseApp(width, height, title)
@@ -12,12 +11,13 @@ void MassModel::OnInit()
 	m_camera.SetMoveSpeed(250.0f);
 
 	m_kernel = CreateKernel(m_width, m_height, false, m_hwnd);
-	m_rootSignature = CreateRootSignature(m_kernel, 1, 0, 0, &StaticSampleDesc::Init(Default));
+	m_rootSignature = CreateRootSignature(m_kernel, 1, 0, 0);
 
 	UINT compileFlags = COMPILE_DEBUG | COMPILE_SKIP_OPTIMIZATION;
 	InputElementDesc inputElementDesc[] =
 	{
 		{ "POSITION", FORMAT_R32G32B32A32_FLOAT },
+		{ "NORMAL", FORMAT_R32G32B32A32_FLOAT }
 	};
 	GraphicsPipelineStateDesc psoDesc;
 	psoDesc.RootSignature = m_rootSignature;
@@ -29,8 +29,8 @@ void MassModel::OnInit()
 
 	m_vertexSetup = CreateVertexSetup(
 		m_kernel,
-		teapotVertex, sizeof(teapotVertex), sizeof(VertexData),
-		teapotIndex, sizeof(teapotIndex), sizeof(DWORD)
+		teapotVertex, sizeof(teapotVertex) / sizeof(VertexPosNormal), sizeof(VertexPosNormal),
+		teapotIndex, sizeof(teapotIndex) / sizeof(DWORD), sizeof(DWORD)
 	);
 
 	for (UINT x = 0; x < TeapotRowCount; ++x)

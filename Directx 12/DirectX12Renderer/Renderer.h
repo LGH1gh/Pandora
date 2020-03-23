@@ -79,7 +79,7 @@ struct FontDesc
 
 Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd);
 ComputeKernel CreateComputeKernel(Kernel kernel);
-RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount = 0, UINT srvCount = 0, UINT uavCount = 0, StaticSampleDesc* staticSampleDesc = nullptr);
+RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount = 0, UINT srvCount = 0, UINT uavCount = 0);
 Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphicsPipelineStateDesc);
 Pipeline CreateComputePipeline(Kernel kernel, ComputePipelineStateDesc& computePipelineStateDesc);
 VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT vertexSize, UINT vertexBufferStride, const void* pIndexData = nullptr, UINT indexSize = 0, UINT indexBufferStride = 0);
@@ -88,6 +88,7 @@ ResourceHeap CreateDepthStencilViewHeap(Kernel kernel);
 ResourceHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT bufferSize);
 ResourceHeap CreateConstantBuffers(Kernel kernel, void* bufferData, UINT bufferSize, UINT bufferCount);
 ResourceHeap CreateTexture(Kernel kernel, LPCWSTR filename);
+ResourceHeap CreateSkybox(Kernel kernel, LPCWSTR filename);
 void UpdateConstantBuffer(ResourceHeap cbvHeap, void* bufferData, UINT bufferSize);
 void UpdateConstantBuffers(ResourceHeap cbvHeap, void* bufferData, UINT bufferSize, UINT bufferCount);
 
@@ -103,6 +104,7 @@ void SetPipeline(Kernel kernel, Pipeline pipeline);
 void SetVertexSetup(Kernel kernel, VertexSetup vertexSetup);
 void SetDescriptorHeaps(Kernel, std::vector<ResourceHeap>);
 void SetConstantBuffer(Kernel kernel, ResourceHeap heap);
+void SetTexture(Kernel kernel, ResourceHeap heap);
 void SetConstantBuffer(Kernel kernel, ResourceHeap heap, UINT index);
 void SetShaderResource(Kernel kernel, ResourceHeap heap);
 void Draw(Kernel kernel, UINT StartVertexLocation, UINT VertexCountPerInstance);

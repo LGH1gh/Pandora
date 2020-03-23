@@ -9,7 +9,7 @@
 #include <d2d1_3.h>
 #include <dwrite.h>
 #include <d3d11on12.h>
-
+#include <DDSTextureLoader.h>
 #include <fstream>
 #include <memory>
 
@@ -976,80 +976,100 @@ struct XD3D12_ROOT_SIGNATURE_DESC : public D3D12_ROOT_SIGNATURE_DESC
 struct XD3D12_STATIC_SAMPLER_DESC : D3D12_STATIC_SAMPLER_DESC
 {
 	XD3D12_STATIC_SAMPLER_DESC() = default;
-	explicit XD3D12_STATIC_SAMPLER_DESC(const D3D12_STATIC_SAMPLER_DESC& o) :
+	explicit XD3D12_STATIC_SAMPLER_DESC(const D3D12_STATIC_SAMPLER_DESC & o) :
 		D3D12_STATIC_SAMPLER_DESC(o)
 	{}
 	XD3D12_STATIC_SAMPLER_DESC(
-		D3D12_FILTER filter,
-		D3D12_TEXTURE_ADDRESS_MODE addressU,
-		D3D12_TEXTURE_ADDRESS_MODE addressV,
-		D3D12_TEXTURE_ADDRESS_MODE addressW,
-		FLOAT mipLODBias,
-		UINT maxAnisotropy,
-		D3D12_COMPARISON_FUNC comparisonFunc,
-		D3D12_STATIC_BORDER_COLOR borderColor,
-		FLOAT minLOD,
-		FLOAT maxLOD,
 		UINT shaderRegister,
-		UINT registerSpace,
-		D3D12_SHADER_VISIBILITY shaderVisibility)
+		D3D12_FILTER filter = D3D12_FILTER_ANISOTROPIC,
+		D3D12_TEXTURE_ADDRESS_MODE addressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		D3D12_TEXTURE_ADDRESS_MODE addressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		D3D12_TEXTURE_ADDRESS_MODE addressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		FLOAT mipLODBias = 0,
+		UINT maxAnisotropy = 16,
+		D3D12_COMPARISON_FUNC comparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		D3D12_STATIC_BORDER_COLOR borderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+		FLOAT minLOD = 0.f,
+		FLOAT maxLOD = D3D12_FLOAT32_MAX,
+		D3D12_SHADER_VISIBILITY shaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
+		UINT registerSpace = 0)
 	{
-		Init(filter, addressU, addressV, addressW, mipLODBias, maxAnisotropy, comparisonFunc, borderColor, 
-			minLOD, maxLOD, shaderRegister, registerSpace, shaderVisibility);
-	}
-	XD3D12_STATIC_SAMPLER_DESC(XD3D12_DEFAULT)
-	{
-		Init(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-			0, 0, D3D12_COMPARISON_FUNC_NEVER, D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK, 0.0f, D3D12_FLOAT32_MAX, 0, 0, D3D12_SHADER_VISIBILITY_ALL);
-	}
-
-	inline void Init(
-		D3D12_FILTER filter,
-		D3D12_TEXTURE_ADDRESS_MODE addressU,
-		D3D12_TEXTURE_ADDRESS_MODE addressV,
-		D3D12_TEXTURE_ADDRESS_MODE addressW,
-		FLOAT mipLODBias,
-		UINT maxAnisotropy,
-		D3D12_COMPARISON_FUNC comparisonFunc,
-		D3D12_STATIC_BORDER_COLOR borderColor,
-		FLOAT minLOD,
-		FLOAT maxLOD,
-		UINT shaderRegister,
-		UINT registerSpace,
-		D3D12_SHADER_VISIBILITY shaderVisibility)
-	{
-		Init(*this, filter, addressU, addressV, addressW, mipLODBias, maxAnisotropy, comparisonFunc, borderColor,
-			minLOD, maxLOD, shaderRegister, registerSpace, shaderVisibility);
+		Init(
+			shaderRegister,
+			filter,
+			addressU,
+			addressV,
+			addressW,
+			mipLODBias,
+			maxAnisotropy,
+			comparisonFunc,
+			borderColor,
+			minLOD,
+			maxLOD,
+			shaderVisibility,
+			registerSpace);
 	}
 
 	static inline void Init(
-		D3D12_STATIC_SAMPLER_DESC& desc,
-		D3D12_FILTER filter,
-		D3D12_TEXTURE_ADDRESS_MODE addressU,
-		D3D12_TEXTURE_ADDRESS_MODE addressV,
-		D3D12_TEXTURE_ADDRESS_MODE addressW,
-		FLOAT mipLODBias,
-		UINT maxAnisotropy,
-		D3D12_COMPARISON_FUNC comparisonFunc,
-		D3D12_STATIC_BORDER_COLOR borderColor,
-		FLOAT minLOD,
-		FLOAT maxLOD,
+		_Out_ D3D12_STATIC_SAMPLER_DESC & samplerDesc,
 		UINT shaderRegister,
-		UINT registerSpace,
-		D3D12_SHADER_VISIBILITY shaderVisibility)
+		D3D12_FILTER filter = D3D12_FILTER_ANISOTROPIC,
+		D3D12_TEXTURE_ADDRESS_MODE addressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		D3D12_TEXTURE_ADDRESS_MODE addressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		D3D12_TEXTURE_ADDRESS_MODE addressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		FLOAT mipLODBias = 0,
+		UINT maxAnisotropy = 16,
+		D3D12_COMPARISON_FUNC comparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		D3D12_STATIC_BORDER_COLOR borderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+		FLOAT minLOD = 0.f,
+		FLOAT maxLOD = D3D12_FLOAT32_MAX,
+		D3D12_SHADER_VISIBILITY shaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
+		UINT registerSpace = 0)
 	{
-		desc.Filter = filter;
-		desc.AddressU = addressU;
-		desc.AddressV = addressV;
-		desc.AddressW = addressW;
-		desc.MipLODBias = mipLODBias;
-		desc.MaxAnisotropy = maxAnisotropy;
-		desc.ComparisonFunc = comparisonFunc;
-		desc.BorderColor = borderColor;
-		desc.MinLOD = minLOD;
-		desc.MaxLOD = maxLOD;
-		desc.ShaderRegister = shaderRegister;
-		desc.ShaderVisibility = shaderVisibility;
+		samplerDesc.ShaderRegister = shaderRegister;
+		samplerDesc.Filter = filter;
+		samplerDesc.AddressU = addressU;
+		samplerDesc.AddressV = addressV;
+		samplerDesc.AddressW = addressW;
+		samplerDesc.MipLODBias = mipLODBias;
+		samplerDesc.MaxAnisotropy = maxAnisotropy;
+		samplerDesc.ComparisonFunc = comparisonFunc;
+		samplerDesc.BorderColor = borderColor;
+		samplerDesc.MinLOD = minLOD;
+		samplerDesc.MaxLOD = maxLOD;
+		samplerDesc.ShaderVisibility = shaderVisibility;
+		samplerDesc.RegisterSpace = registerSpace;
+	}
+	inline void Init(
+		UINT shaderRegister,
+		D3D12_FILTER filter = D3D12_FILTER_ANISOTROPIC,
+		D3D12_TEXTURE_ADDRESS_MODE addressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		D3D12_TEXTURE_ADDRESS_MODE addressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		D3D12_TEXTURE_ADDRESS_MODE addressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		FLOAT mipLODBias = 0,
+		UINT maxAnisotropy = 16,
+		D3D12_COMPARISON_FUNC comparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		D3D12_STATIC_BORDER_COLOR borderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+		FLOAT minLOD = 0.f,
+		FLOAT maxLOD = D3D12_FLOAT32_MAX,
+		D3D12_SHADER_VISIBILITY shaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
+		UINT registerSpace = 0)
+	{
+		Init(
+			*this,
+			shaderRegister,
+			filter,
+			addressU,
+			addressV,
+			addressW,
+			mipLODBias,
+			maxAnisotropy,
+			comparisonFunc,
+			borderColor,
+			minLOD,
+			maxLOD,
+			shaderVisibility,
+			registerSpace);
 	}
 };
 
@@ -1193,6 +1213,22 @@ struct XD3D12_VERSIONED_ROOT_SIGNATURE_DESC : public D3D12_VERSIONED_ROOT_SIGNAT
 	}
 };
 
+
+inline UINT64 GetRequiredIntermediateSize(
+	_In_ ID3D12Resource* pDestinationResource,
+	_In_range_(0, D3D12_REQ_SUBRESOURCES) UINT FirstSubresource,
+	_In_range_(0, D3D12_REQ_SUBRESOURCES - FirstSubresource) UINT NumSubresources)
+{
+	auto Desc = pDestinationResource->GetDesc();
+	UINT64 RequiredSize = 0;
+
+	ID3D12Device* pDevice = nullptr;
+	pDestinationResource->GetDevice(IID_ID3D12Device, reinterpret_cast<void**>(&pDevice));
+	pDevice->GetCopyableFootprints(&Desc, FirstSubresource, NumSubresources, 0, nullptr, nullptr, nullptr, &RequiredSize);
+	pDevice->Release();
+
+	return RequiredSize;
+}
 
 inline void MemcpySubresource(
 	_In_ const D3D12_MEMCPY_DEST* pDest,

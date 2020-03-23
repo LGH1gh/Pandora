@@ -4,5 +4,6 @@
 #include <DirectXMath.h>
 
 #include <vector>
+#include <array>
 
 using namespace DirectX;

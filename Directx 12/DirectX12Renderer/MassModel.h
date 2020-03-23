@@ -4,7 +4,16 @@
 #include "BaseApp.h"
 #include "StepTimer.h"
 #include "SimpleCamera.h"
+#include "Geometry.h"
 
+extern const VertexPosNormal teapotVertex[];
+extern const UINT teapotVertexCount;
+extern const DWORD teapotIndex[];
+extern const UINT teapotIndexCount;
+extern const VertexPos skyboxVertex[];
+extern const UINT skyboxVertexCount;
+extern const DWORD skyboxIndex[];
+extern const UINT skyboxIndexCount;
 
 struct MassModelConstantBuffer
 {

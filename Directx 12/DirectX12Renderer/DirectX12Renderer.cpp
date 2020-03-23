@@ -2,6 +2,60 @@
 #include "Renderer.h"
 #include "DirectX12RenderHelper.h"
 
+std::array<const XD3D12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers()
+{
+	const XD3D12_STATIC_SAMPLER_DESC pointWrap(
+		0, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP); // addressW
+
+	const XD3D12_STATIC_SAMPLER_DESC pointClamp(
+		1, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
+
+	const XD3D12_STATIC_SAMPLER_DESC linearWrap(
+		2, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP); // addressW
+
+	const XD3D12_STATIC_SAMPLER_DESC linearClamp(
+		3, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP); // addressW
+
+	const XD3D12_STATIC_SAMPLER_DESC anisotropicWrap(
+		4, // shaderRegister
+		D3D12_FILTER_ANISOTROPIC, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressW
+		0.0f,                             // mipLODBias
+		8);                               // maxAnisotropy
+
+	const XD3D12_STATIC_SAMPLER_DESC anisotropicClamp(
+		5, // shaderRegister
+		D3D12_FILTER_ANISOTROPIC, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressW
+		0.0f,                              // mipLODBias
+		8);                                // maxAnisotropy
+
+
+	return  { pointWrap, pointClamp,
+		linearWrap, linearClamp,
+		anisotropicWrap, anisotropicClamp };
+}
+
 struct SResourceHeap
 {
 	ComPtr<ID3D12DescriptorHeap> m_descHeap;
@@ -23,7 +77,6 @@ struct SResourceHeap
 		m_gpuDescStart = m_descHeap->GetGPUDescriptorHandleForHeapStart();
 
 		m_descSize = device->GetDescriptorHandleIncrementSize(type);
-
 		m_pData = nullptr;
 	}
 
@@ -501,7 +554,7 @@ ComputeKernel CreateComputeKernel(Kernel kernel)
 	return computeKernel;
 }
 
-RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount, UINT srvCount, UINT uavCount, StaticSampleDesc* staticSampleDesc)
+RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount, UINT srvCount, UINT uavCount)
 {
 	RootSignature rootSignature = new SRootSignature();
 	
@@ -544,16 +597,9 @@ RootSignature CreateRootSignature(Kernel kernel, UINT cbvCount, UINT srvCount, U
 	}
 	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
-	if (staticSampleDesc == nullptr)
-	{
-		rootSignatureDesc.Init_1_1(index, rootParameters, 0, nullptr, rootSignatureFlags);
-	}
-	else
-	{
-		D3D12_STATIC_SAMPLER_DESC samplerDesc;
-		samplerDesc = Translate(staticSampleDesc);
-		rootSignatureDesc.Init_1_1(index, rootParameters, 1, &samplerDesc, rootSignatureFlags);
-	}
+	auto staticSamplers = GetStaticSamplers();
+	rootSignatureDesc.Init_1_1(index, rootParameters, (UINT)staticSamplers.size(), staticSamplers.data(), rootSignatureFlags);
+
 
 	ComPtr<ID3DBlob> signature;
 	ComPtr<ID3DBlob> error;
@@ -876,6 +922,43 @@ ResourceHeap CreateTexture(Kernel kernel, LPCWSTR filename)
 	return texture;
 }
 
+ResourceHeap CreateSkybox(Kernel kernel, LPCWSTR filename)
+{
+	ResourceHeap texture = new SResourceHeap();
+	texture->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+	ID3D12Resource* textureBuffer;
+	ID3D12Resource* textureBufferUpload;
+	std::vector<D3D12_SUBRESOURCE_DATA> textureDatas;
+	std::unique_ptr<uint8_t[]> ddsData;
+	ThrowIfFailed(LoadDDSTextureFromFile(
+		kernel->m_device.Get(),
+		filename,
+		&textureBuffer,
+		ddsData,
+		textureDatas,
+		SIZE_MAX
+	));
+	UINT textureBufferUploadSize = GetRequiredIntermediateSize(textureBuffer, 0, static_cast<UINT>(textureDatas.size()));
+	ThrowIfFailed(kernel->m_device->CreateCommittedResource(
+		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&XD3D12_RESOURCE_DESC::Buffer(textureBufferUploadSize),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&textureBufferUpload)
+	));
+	UpdateSubresources(kernel->m_commandList.Get(), textureBuffer, textureBufferUpload, 0, 0, static_cast<UINT>(textureDatas.size()), textureDatas.data());
+	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(textureBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+	
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = textureBuffer->GetDesc().Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+	srvDesc.Texture2D.MipLevels = textureBuffer->GetDesc().MipLevels;
+	kernel->m_device->CreateShaderResourceView(textureBuffer, &srvDesc, texture->GetCPUHandle(0));
+
+	return texture;
+}
 
 void UpdateConstantBuffer(ResourceHeap cbvHeap, void* bufferData, UINT bufferSize)
 {
@@ -1005,7 +1088,7 @@ void SetDescriptorHeaps(Kernel kernel, std::vector<ResourceHeap> heaps)
 	{
 		ppHeaps.push_back(heap->m_descHeap.Get());
 	}
-	kernel->m_commandList->SetDescriptorHeaps(ppHeaps.size(), &ppHeaps[0]);
+	kernel->m_commandList->SetDescriptorHeaps(ppHeaps.size(), ppHeaps.data());
 }
 
 void SetConstantBuffer(Kernel kernel, ResourceHeap heap)
@@ -1024,6 +1107,11 @@ void SetShaderResource(Kernel kernel, ResourceHeap heap)
 {
 	ID3D12DescriptorHeap* descriptorHeaps[] = { heap->m_descHeap.Get() };
 	kernel->m_commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	kernel->m_commandList->SetGraphicsRootDescriptorTable(1, heap->GetGPUHandle(0));
+}
+
+void SetTexture(Kernel kernel, ResourceHeap heap)
+{
 	kernel->m_commandList->SetGraphicsRootDescriptorTable(1, heap->GetGPUHandle(0));
 }
 
@@ -1179,3 +1267,5 @@ void ExecuteCommand(ComputeKernel computeKernel)
 	ID3D12CommandList* ppCommandLists[] = { computeKernel->m_computeCommandList.Get() };
 	computeKernel->m_computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 }
+
+

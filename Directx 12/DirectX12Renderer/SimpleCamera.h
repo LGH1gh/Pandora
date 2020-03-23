@@ -22,12 +22,17 @@ public:
     void Init(XMFLOAT3 position);
     void Update(float elapsedSeconds);
     XMMATRIX GetViewMatrix();
+    XMMATRIX GetStaticViewMatrix();
     XMMATRIX GetProjectionMatrix(float fov, float aspectRatio, float nearPlane = 1.0f, float farPlane = 1000.0f);
     void SetMoveSpeed(float unitsPerSecond);
     void SetTurnSpeed(float radiansPerSecond);
 
     void OnKeyDown(WPARAM key);
     void OnKeyUp(WPARAM key);
+
+    XMFLOAT3 GetEyePosition();
+    XMFLOAT3 GetLookDirection();
+    XMFLOAT3 GetUpDirection();
 
 private:
     void Reset();
