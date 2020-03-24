@@ -19,7 +19,7 @@ PSInput VSMain(float4 position : POSITION, float3 normal : NORMAL)
 {
     PSInput result;
     result.position = mul(position, g_worldViewProjection);
-    result.normal = mul(normal, g_worldInverseTranspose);
-    result.eye = g_eyePosition - position;
+    result.normal = mul(normal, g_worldViewProjection);
+    result.eye = position - g_eyePosition;
     return result;
 }

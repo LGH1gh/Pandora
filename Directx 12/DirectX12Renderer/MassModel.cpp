@@ -17,7 +17,7 @@ void MassModel::OnInit()
 	InputElementDesc inputElementDesc[] =
 	{
 		{ "POSITION", FORMAT_R32G32B32A32_FLOAT },
-		{ "NORMAL", FORMAT_R32G32B32A32_FLOAT }
+		{ "NORMAL", FORMAT_R32G32B32_FLOAT }
 	};
 	GraphicsPipelineStateDesc psoDesc;
 	psoDesc.RootSignature = m_rootSignature;
@@ -29,8 +29,8 @@ void MassModel::OnInit()
 
 	m_vertexSetup = CreateVertexSetup(
 		m_kernel,
-		teapotVertex, sizeof(teapotVertex) / sizeof(VertexPosNormal), sizeof(VertexPosNormal),
-		teapotIndex, sizeof(teapotIndex) / sizeof(DWORD), sizeof(DWORD)
+		teapotVertex, sizeof(teapotVertex), sizeof(VertexPosNormal),
+		teapotIndex, sizeof(teapotIndex), sizeof(DWORD)
 	);
 
 	for (UINT x = 0; x < TeapotRowCount; ++x)
@@ -40,7 +40,7 @@ void MassModel::OnInit()
 			for (UINT z = 0; z < TeapotHeightCount; ++z)
 			{
 				m_constantBuffer[x * TeapotColumnCount * TeapotHeightCount + y * TeapotHeightCount + z].offset = XMFLOAT4(
-					40.f * (int)(x - TeapotRowCount / 2), 40.f * (int)(y - TeapotColumnCount / 2), 40.f * (int)(z - TeapotHeightCount / 2), 0.0f
+					60.f * (int)(x - TeapotRowCount / 2), 40.f * (int)(y - TeapotColumnCount / 2), 60.f * (int)(z - TeapotHeightCount / 2), 0.0f
 				);
 				XMStoreFloat4x4(&m_constantBuffer[x * TeapotColumnCount * TeapotHeightCount + y * TeapotHeightCount + z].worldViewProjection, XMMatrixMultiply(m_camera.GetViewMatrix(), m_camera.GetProjectionMatrix(0.8f, static_cast<float>(m_width) / static_cast<float>(m_height), 1.0f, 5000.0f)));
 
