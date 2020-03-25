@@ -30,6 +30,16 @@ struct VertexPosNormal
 	{}
 };
 
+struct VertexPosTex
+{
+    XMFLOAT4 position;
+    XMFLOAT2 texcoord;
+    VertexPosTex(XMFLOAT4 position, XMFLOAT2 texcoord) :
+        position(position),
+        texcoord(texcoord)
+    {}
+};
+
 static const VertexPosNormal teapotVertex[] =
 {
     { { 10.324245, 9.579831, 2.105685 }, { -0.962100, -0.196900, -0.188900} },
@@ -8097,7 +8107,6 @@ static const VertexPosNormal teapotVertex[] =
     { { 7.914014, 9.957387, -3.381841 }, { 0.295900, 0.947500, -0.121200} },
     { { 8.403209, 9.957387, -1.738365 }, { 0.314400, 0.947300, -0.061700} },
 };
-//const UINT teapotVertexCount = 8064;
 static const DWORD teapotIndex[] =
 {
     0, 1, 2,
@@ -12133,7 +12142,6 @@ static const DWORD teapotIndex[] =
     8060, 8061, 8062,
     8060, 8062, 8063,
 };
-//const UINT teapotIndexCount = 12096;
 
 
 static const VertexPos skyboxVertex[] =
@@ -12169,7 +12177,6 @@ static const VertexPos skyboxVertex[] =
     { 1, -1, -1 },
     { 1, -1, 1 },
 };
-//const UINT skyboxVertexCount = 24;
 static const DWORD skyboxIndex[] =
 {
     0, 1, 2,
@@ -12190,4 +12197,11 @@ static const DWORD skyboxIndex[] =
     20, 21, 22,
     20, 22, 23
 };
-//const UINT skyboxIndexCount = 36;
+
+static const VertexPosTex quadVertex[] = 
+{
+    { { -1.0f,1.0f, 0.0f,1.0f },{ 0.0f,0.0f } },
+    { { 1.0f, 1.0f, 0.0f,1.0f }, {1.0f,0.0f } },
+    { { -1.0f, -1.0f, 0.0f,1.0f },{ 0.0f,1.0f } },
+    { { 1.0f, -1.0f, 0.0f,1.0f },{ 1.0f,1.0f } }
+};

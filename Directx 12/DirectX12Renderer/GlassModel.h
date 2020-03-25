@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Renderer.h"
 #include "BaseApp.h"
 #include "StepTimer.h"
 #include "SimpleCamera.h"

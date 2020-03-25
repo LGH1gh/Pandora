@@ -38,14 +38,14 @@ struct GraphicsPipelineStateDesc
     ShaderDesc VS;
     ShaderDesc PS, DS, HS, GS;
     // UINT SampleMask;
-    // RasterizerDesc RasterizerState;
+    RasterizerDesc RasterizerState = RasterizerDesc(Default);
     CullMode CullMode = CULL_MODE_NONE;
     BlendDesc BlendState = BlendDesc(Default);
     DepthStencilDesc DepthStencilState = DepthStencilDesc(Default);
     PrimitiveTopologyType PrimitiveTopologyType = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    // UINT NumRenderTargets;
-    // Format RTVFormats[8];
-    // Format DSVFormats;
+    UINT NumRenderTargets = 1;
+    Format RTVFormats[8] = { FORMAT_R8G8B8A8_UNORM };
+    Format DSVFormat = FORMAT_D32_FLOAT;
     // SampleDesc SampleDesc;
     // UINT NodeMask;
     //  D3D12_CACHED_PIPELINE_STATE CachedPSO;
@@ -84,11 +84,14 @@ Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphi
 Pipeline CreateComputePipeline(Kernel kernel, ComputePipelineStateDesc& computePipelineStateDesc);
 VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT vertexSize, UINT vertexBufferStride, const void* pIndexData = nullptr, UINT indexSize = 0, UINT indexBufferStride = 0);
 
-ResourceHeap CreateDepthStencilViewHeap(Kernel kernel);
+ResourceHeap CreateDepthStencilViewHeap(Kernel kernel, Format format = FORMAT_D32_FLOAT);
 ResourceHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT bufferSize);
 ResourceHeap CreateConstantBuffers(Kernel kernel, void* bufferData, UINT bufferSize, UINT bufferCount);
 ResourceHeap CreateTexture(Kernel kernel, LPCWSTR filename);
 ResourceHeap CreateSkybox(Kernel kernel, LPCWSTR filename);
+ResourceHeap CreateRenderTargets(Kernel kernel, UINT bufferCount, std::vector<Format> formats, float* clearColor);
+ResourceHeap CreateShaderResourcesWithResource(Kernel kernel, ResourceHeap resource, UINT bufferCount, std::vector<Format> formats);
+
 void UpdateConstantBuffer(ResourceHeap cbvHeap, void* bufferData, UINT bufferSize);
 void UpdateConstantBuffers(ResourceHeap cbvHeap, void* bufferData, UINT bufferSize, UINT bufferCount);
 
@@ -98,7 +101,7 @@ void EndOnDestroy(Kernel kernel);
 
 void Reset(Kernel kernel, Pipeline pipeline);
 void Reset(ComputeKernel computeKernel, Pipeline pipeline);
-void BeginPopulateGraphicsCommand(Kernel kernel, ResourceHeap dsvHeap = nullptr, const float* clearColor = Color);
+void BeginPopulateGraphicsCommand(Kernel kernel, ResourceHeap dsvHeap, const float* clearColor = Color, bool deferredShading = false);
 void SetGraphicsRootSignature(Kernel kernel, RootSignature rootSignature);
 void SetPipeline(Kernel kernel, Pipeline pipeline);
 void SetVertexSetup(Kernel kernel, VertexSetup vertexSetup);
@@ -126,3 +129,9 @@ void SetConstantBuffer(ComputeKernel computeKernel, ResourceHeap descriptorHeap)
 void EndPopulateComputeCommand(ComputeKernel computeKernel, ResourceHeap descriptorHeap, const UINT dispatch[]);
 void ExecuteCommand(Kernel kernel);
 void ExecuteCommand(ComputeKernel computeKernel);
+
+void ClearRenderTargetView(Kernel kernel, ResourceHeap resourceHeap, UINT index, float* clearColor);
+void ClearDepthStencilView(Kernel kernel, ResourceHeap resourceHeap);
+void SetRenderTargets(Kernel, ResourceHeap, ResourceHeap, UINT);
+void SetRenderTargetsVisible(Kernel, ResourceHeap, UINT);
+void SetDepthStencilVisible(Kernel, ResourceHeap, UINT);

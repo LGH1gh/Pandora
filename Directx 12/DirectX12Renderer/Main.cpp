@@ -1,6 +1,6 @@
-#include "MassModel.h"
+#include "DeferredShading.h"
 
-extern MassModel* app = new MassModel(1080, 720, L"Renderer");
+extern DeferredShading* app = new DeferredShading(1080, 720, L"Renderer");
 
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {

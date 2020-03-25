@@ -53,17 +53,32 @@ enum ConservativeRasterizationMode
 typedef
 struct RasterizerDesc
 {
-    //  FillMode FillMode;
+    FillMode FillMode;
     CullMode CullMode;
     BOOL FrontCounterClockwise;
     INT DepthBias;
     FLOAT DepthBiasClamp;
     FLOAT SlopeScaledDepthBias;
-    //  BOOL DepthClipEnable;
-    //  BOOL MultisampleEnable;
+    BOOL DepthClipEnable;
+    BOOL MultisampleEnable;
     BOOL AntialiasedLineEnable;
     UINT ForcedSampleCount;
     ConservativeRasterizationMode ConservativeRaster;
+
+    explicit RasterizerDesc(DEFAULT)
+    {
+        FillMode = FILL_MODE_SOLID;
+        CullMode = CULL_MODE_BACK;
+        FrontCounterClockwise = FALSE;
+        DepthBias = 0;
+        DepthBiasClamp = 0.0f;
+        SlopeScaledDepthBias = 0.0f;
+        DepthClipEnable = TRUE;
+        MultisampleEnable = FALSE;
+        AntialiasedLineEnable = FALSE;
+        ForcedSampleCount = 0;
+        ConservativeRaster = CONSERVATIVE_RASTERIZATION_MODE_OFF;
+    }
 } 	RasterizerDesc;
 
 

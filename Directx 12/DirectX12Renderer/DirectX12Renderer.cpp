@@ -63,7 +63,7 @@ struct SResourceHeap
 	D3D12_GPU_DESCRIPTOR_HANDLE m_gpuDescStart;
 	UINT8* m_pData;
 	size_t m_descSize;
-	ComPtr<ID3D12Resource> m_resource;
+	std::vector<ComPtr<ID3D12Resource>> m_resource;
 
 	void Init(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_FLAGS flags, size_t size = -1)
 	{
@@ -445,7 +445,22 @@ D3D12_DEPTH_STENCIL_DESC Translate(DepthStencilDesc depthStencilDesc)
 	result.BackFace = Translate(depthStencilDesc.BackFace);
 	return result;
 }
-
+D3D12_RASTERIZER_DESC Translate(RasterizerDesc rasterizerDesc)
+{
+	D3D12_RASTERIZER_DESC result = {};
+	result.FillMode = (D3D12_FILL_MODE)rasterizerDesc.FillMode;
+	result.CullMode = (D3D12_CULL_MODE)rasterizerDesc.CullMode;
+	result.FrontCounterClockwise = rasterizerDesc.FrontCounterClockwise;
+	result.DepthBias = rasterizerDesc.DepthBias;
+	result.DepthBiasClamp = rasterizerDesc.DepthBiasClamp;
+	result.SlopeScaledDepthBias = rasterizerDesc.SlopeScaledDepthBias;
+	result.DepthClipEnable = rasterizerDesc.DepthClipEnable;
+	result.MultisampleEnable = rasterizerDesc.MultisampleEnable;
+	result.AntialiasedLineEnable = rasterizerDesc.AntialiasedLineEnable;
+	result.ForcedSampleCount = rasterizerDesc.ForcedSampleCount;
+	result.ConservativeRaster = (D3D12_CONSERVATIVE_RASTERIZATION_MODE)rasterizerDesc.ConservativeRaster;
+	return result;
+}
 
 Kernel CreateKernel(UINT width, UINT height, bool useWarpDevice, HWND hwnd)
 {
@@ -679,17 +694,17 @@ Pipeline CreateGraphicsPipeline(Kernel kernel, GraphicsPipelineStateDesc& graphi
 		psoDesc.PS = XD3D12_SHADER_BYTECODE(pixelShader.Get());
 	}
 
-	psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+	psoDesc.RasterizerState = Translate(graphicsPipelineStateDesc.RasterizerState);
 	psoDesc.RasterizerState.CullMode = (D3D12_CULL_MODE)(graphicsPipelineStateDesc.CullMode);
-	psoDesc.RasterizerState.DepthClipEnable = true;
-	psoDesc.RasterizerState.MultisampleEnable = true;
 
 	psoDesc.BlendState = Translate(graphicsPipelineStateDesc.BlendState);
 	psoDesc.DepthStencilState = Translate(graphicsPipelineStateDesc.DepthStencilState);
 
-	psoDesc.NumRenderTargets = 1;
-	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	psoDesc.NumRenderTargets = graphicsPipelineStateDesc.NumRenderTargets;
+	for (UINT i = 0; i < 8; ++i) {
+		psoDesc.RTVFormats[0] = (DXGI_FORMAT)graphicsPipelineStateDesc.RTVFormats[0];
+	}
+	psoDesc.DSVFormat = (DXGI_FORMAT)graphicsPipelineStateDesc.DSVFormat;
 	psoDesc.SampleDesc.Count = 1;
 	psoDesc.SampleMask = UINT_MAX;
 
@@ -780,13 +795,13 @@ VertexSetup CreateVertexSetup(Kernel kernel, const void* pVertexData, UINT verte
 	return vertexSetup;
 }
 
-ResourceHeap CreateDepthStencilViewHeap(Kernel kernel)
+ResourceHeap CreateDepthStencilViewHeap(Kernel kernel, Format format)
 {
 	ResourceHeap dsvHeap = new SResourceHeap();
 	dsvHeap->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
 
 	D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
-	depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	depthOptimizedClearValue.Format = (DXGI_FORMAT)format;
 	depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
 	depthOptimizedClearValue.DepthStencil.Stencil = 0;
 
@@ -794,19 +809,19 @@ ResourceHeap CreateDepthStencilViewHeap(Kernel kernel)
 	ThrowIfFailed(kernel->m_device->CreateCommittedResource(
 		&XD3D12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
-		&XD3D12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, kernel->m_width, kernel->m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+		&XD3D12_RESOURCE_DESC::Tex2D((DXGI_FORMAT)format, kernel->m_width, kernel->m_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
 		D3D12_RESOURCE_STATE_DEPTH_WRITE,
 		&depthOptimizedClearValue,
 		IID_PPV_ARGS(&depthStencilBuffer)
 	));
 
 	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
-	depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	depthStencilDesc.Format = (DXGI_FORMAT)format;
 	depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 	depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
 
 	kernel->m_device->CreateDepthStencilView(depthStencilBuffer, &depthStencilDesc, dsvHeap->GetCPUHandle(0));
-
+	dsvHeap->m_resource.push_back(depthStencilBuffer);
 	return dsvHeap;
 }
 
@@ -842,7 +857,7 @@ ResourceHeap CreateConstantBuffers(Kernel kernel, void* bufferData, UINT bufferS
 	{
 		memcpy(cbvHeap->m_pData + (((bufferSize + 255) & ~255) * i), (char*)bufferData + (bufferSize * i), bufferSize);
 	}
-	cbvHeap->m_resource = constantBuffer;
+	cbvHeap->m_resource.push_back(constantBuffer);
 	return cbvHeap;
 }
 
@@ -869,7 +884,7 @@ ResourceHeap CreateConstantBuffer(Kernel kernel, void* bufferData, UINT bufferSi
 	XD3D12_RANGE readRange(0, 0);
 	ThrowIfFailed(constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&cbvHeap->m_pData)));
 	memcpy(cbvHeap->m_pData, bufferData, bufferSize);
-	cbvHeap->m_resource = constantBuffer;
+	cbvHeap->m_resource.push_back(constantBuffer);
 	return cbvHeap;
 }
 
@@ -1033,7 +1048,7 @@ void Reset(ComputeKernel computeKernel, Pipeline pipeline)
 	ThrowIfFailed(computeKernel->m_computeCommandList->Reset(computeKernel->m_computeAllocator.Get(), pipeline->m_pipeline.Get()));
 }
 
-void BeginPopulateGraphicsCommand(Kernel kernel, ResourceHeap dsvHeap, const float* clearColor)
+void BeginPopulateGraphicsCommand(Kernel kernel, ResourceHeap dsvHeap, const float* clearColor, bool deferredShading)
 {
 
 	D3D12_VIEWPORT vp = { 0.0f, 0.0f, static_cast<float>(kernel->m_width), static_cast<float>(kernel->m_height), 0.0f, 1.0f };
@@ -1041,19 +1056,26 @@ void BeginPopulateGraphicsCommand(Kernel kernel, ResourceHeap dsvHeap, const flo
 	kernel->m_commandList->RSSetViewports(1, &vp);
 	kernel->m_commandList->RSSetScissorRects(1, &sr);
 	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(kernel->m_renderTargets[kernel->m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
+	
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(kernel->m_rtvHeap->GetCPUHandle(kernel->m_frameIndex));
-	if (dsvHeap == nullptr)
+	if (!deferredShading)
 	{
-		kernel->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
-		kernel->m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+		if (dsvHeap == nullptr)
+		{
+			kernel->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+			kernel->m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+		}
+		else
+		{
+			D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsvHeap->GetCPUHandle(0));
+			kernel->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+			kernel->m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+			kernel->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		}
 	}
 	else
 	{
-		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsvHeap->GetCPUHandle(0));
-		kernel->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 		kernel->m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-		kernel->m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 	}
 }
 
@@ -1215,13 +1237,13 @@ ResourceHeap CreateComputeBuffer(Kernel kernel, void* bufferData, UINT bufferCou
 	uavDesc.Buffer.CounterOffsetInBytes = 0;
 	uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 	kernel->m_device->CreateUnorderedAccessView(buffer, nullptr, &uavDesc, srvUavHeap->GetCPUHandle(1));
-	srvUavHeap->m_resource = buffer;
+	srvUavHeap->m_resource.push_back(buffer);
 	return srvUavHeap;
 }
 
 void BeginPopulateComputeCommand(ComputeKernel computeKernel, ResourceHeap descriptorHeap)
 {
-	computeKernel->m_computeCommandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(descriptorHeap->m_resource.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+	computeKernel->m_computeCommandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(descriptorHeap->m_resource[0].Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 }
 
 void SetComputePipeline(ComputeKernel computeKernel, Pipeline pipeline)
@@ -1252,7 +1274,7 @@ void SetConstantBuffer(ComputeKernel computeKernel, ResourceHeap descriptorHeap)
 void EndPopulateComputeCommand(ComputeKernel computeKernel, ResourceHeap descriptorHeap, const UINT dispatch[])
 {
 	computeKernel->m_computeCommandList->Dispatch(dispatch[0], dispatch[1], dispatch[2]);
-	computeKernel->m_computeCommandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(descriptorHeap->m_resource.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+	computeKernel->m_computeCommandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(descriptorHeap->m_resource[0].Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 	ThrowIfFailed(computeKernel->m_computeCommandList->Close());
 
 }
@@ -1268,4 +1290,116 @@ void ExecuteCommand(ComputeKernel computeKernel)
 	computeKernel->m_computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 }
 
+ResourceHeap CreateRenderTargets(Kernel kernel, UINT bufferCount, std::vector<Format> formats, float* clearColor)
+{
+	ResourceHeap rtvHeap = new SResourceHeap;
+	rtvHeap->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, bufferCount, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
+	XD3D12_HEAP_PROPERTIES heapProperty(D3D12_HEAP_TYPE_DEFAULT);
 
+	D3D12_RESOURCE_DESC resourceDesc;
+	ZeroMemory(&resourceDesc, sizeof(resourceDesc));
+	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	resourceDesc.Alignment = 0;
+	resourceDesc.SampleDesc.Count = 1;
+	resourceDesc.SampleDesc.Quality = 0;
+	resourceDesc.MipLevels = 1;
+	resourceDesc.DepthOrArraySize = 1;
+	resourceDesc.Width = kernel->m_width;
+	resourceDesc.Height = kernel->m_height;
+	resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+	D3D12_CLEAR_VALUE clearVal;
+	clearVal.Color[0] = clearColor[0];
+	clearVal.Color[1] = clearColor[1];
+	clearVal.Color[2] = clearColor[2];
+	clearVal.Color[3] = clearColor[3];
+
+	for (UINT i = 0; i < bufferCount; ++i)
+	{
+		ComPtr<ID3D12Resource> resource;
+		resourceDesc.Format = (DXGI_FORMAT)formats[i];
+		clearVal.Format = (DXGI_FORMAT)formats[i];
+		ThrowIfFailed(kernel->m_device->CreateCommittedResource(
+			&heapProperty,
+			D3D12_HEAP_FLAG_NONE,
+			&resourceDesc,
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			&clearVal,
+			IID_PPV_ARGS(&resource)
+		));
+		rtvHeap->m_resource.push_back(resource);
+	}
+
+	D3D12_RENDER_TARGET_VIEW_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.Texture2D.MipSlice = 0;
+	desc.Texture2D.PlaneSlice = 0;
+	desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
+	for (UINT i = 0; i < bufferCount; ++i)
+	{
+		desc.Format = (DXGI_FORMAT)formats[i];
+		kernel->m_device->CreateRenderTargetView(rtvHeap->m_resource[i].Get(), &desc, rtvHeap->GetCPUHandle(i));
+	}
+
+	return rtvHeap;
+}
+
+ResourceHeap CreateShaderResourcesWithResource(Kernel kernel, ResourceHeap resource, UINT bufferCount, std::vector<Format> formats)
+{
+	ResourceHeap srvHeap = new SResourceHeap;
+	srvHeap->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, bufferCount, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC descSRV;
+	ZeroMemory(&descSRV, sizeof(descSRV));
+	descSRV.Texture2D.MipLevels = 1;
+	descSRV.Texture2D.MostDetailedMip = 0;
+	descSRV.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	descSRV.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+	for (UINT i = 0; i < bufferCount; ++i)
+	{
+		descSRV.Format = (DXGI_FORMAT)formats[i];
+		kernel->m_device->CreateShaderResourceView(resource->m_resource[i].Get(), &descSRV, srvHeap->GetCPUHandle(i));
+	}
+	return srvHeap;
+}
+
+void ClearRenderTargetView(Kernel kernel, ResourceHeap resourceHeap, UINT index, float* clearColor)
+{
+	kernel->m_commandList->ClearRenderTargetView(resourceHeap->GetCPUHandle(index), clearColor, 0, nullptr);
+}
+
+void ClearDepthStencilView(Kernel kernel, ResourceHeap resourceHeap)
+{
+	kernel->m_commandList->ClearDepthStencilView(resourceHeap->GetCPUHandle(0), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0xff, 0, nullptr);
+}
+
+void SetRenderTargets(Kernel kernel, ResourceHeap rtvHeap, ResourceHeap dsvHeap, UINT bufferCount)
+{
+	if (rtvHeap != nullptr) {
+		kernel->m_commandList->OMSetRenderTargets(bufferCount, &rtvHeap->GetCPUHandle(0), true, &dsvHeap->GetCPUHandle(0));
+	}
+	else
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(kernel->m_rtvHeap->GetCPUHandle(kernel->m_frameIndex));
+		kernel->m_commandList->OMSetRenderTargets(bufferCount, &rtvHandle, true, nullptr);
+	}
+}
+
+void SetRenderTargetsVisible(Kernel kernel, ResourceHeap resourceHeap, UINT count)
+{
+	for (UINT i = 0; i < count; ++i)
+	{
+		kernel->m_commandList->ResourceBarrier(1, (1, &XD3D12_RESOURCE_BARRIER::Transition(resourceHeap->m_resource[i].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ)));
+	}
+}
+
+void SetDepthStencilVisible(Kernel kernel, ResourceHeap resourceHeap, UINT count)
+{
+	for (UINT i = 0; i < count; ++i)
+	{
+		kernel->m_commandList->ResourceBarrier(1, (1, &XD3D12_RESOURCE_BARRIER::Transition(resourceHeap->m_resource[i].Get(), D3D12_RESOURCE_STATE_DEPTH_READ, D3D12_RESOURCE_STATE_GENERIC_READ)));
+	}
+}

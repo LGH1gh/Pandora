@@ -37,6 +37,12 @@
     <Filter Include="GlassModel\Assets">
       <UniqueIdentifier>{17b475e0-4287-4927-8943-3f680b58362a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="DeferredShading">
+      <UniqueIdentifier>{3d5eb094-16fd-4a46-b78c-6d3681a7c35e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DeferredShading\Assets">
+      <UniqueIdentifier>{c3fe2565-50d2-45b8-9e58-6a7c7d88be7f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderer.h">
@@ -81,6 +87,9 @@
     <ClInclude Include="Geometry.cpp">
       <Filter>资源文件</Filter>
     </ClInclude>
+    <ClInclude Include="DeferredShading.h">
+      <Filter>DeferredShading</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DirectX12Renderer.cpp">
@@ -106,6 +115,9 @@
     </ClCompile>
     <ClCompile Include="GlassModel.cpp">
       <Filter>GlassModel</Filter>
+    </ClCompile>
+    <ClCompile Include="DeferredShading.cpp">
+      <Filter>DeferredShading</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -139,6 +151,18 @@
     </None>
     <None Include="SkyboxPixelShader.hlsl">
       <Filter>GlassModel\Assets</Filter>
+    </None>
+    <None Include="BasicVS.hlsl">
+      <Filter>DeferredShading\Assets</Filter>
+    </None>
+    <None Include="BasicPS.hlsl">
+      <Filter>DeferredShading\Assets</Filter>
+    </None>
+    <None Include="LightPassPS.hlsl">
+      <Filter>DeferredShading\Assets</Filter>
+    </None>
+    <None Include="ScreenQuadVS.hlsl">
+      <Filter>DeferredShading\Assets</Filter>
     </None>
   </ItemGroup>
 </Project>
