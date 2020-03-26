@@ -12205,3 +12205,9 @@ static const VertexPosTex quadVertex[] =
     { { -1.0f, -1.0f, 0.0f,1.0f },{ 0.0f,1.0f } },
     { { 1.0f, -1.0f, 0.0f,1.0f },{ 1.0f,1.0f } }
 };
+
+static const DWORD quadIndex[] =
+{
+    0, 1, 2,
+    1, 2, 3,
+};

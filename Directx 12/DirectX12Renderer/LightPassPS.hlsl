@@ -3,26 +3,14 @@ struct vs_out {
 	float2 texcoord : TEXCOORD;
 };
 
-struct SurfaceData
-{
-	float3 positionView;         // View space position
-	float3 normal;               // View space normal
-	float4 albedo;
-	float3 specular;
-	float gloss;
-};
-
-
 cbuffer ViewData : register (b0)
 {
-	float4x4 gMVP;
-	float4x4 gInvPV;
+	row_major float4x4 gMVP;
+	row_major float4x4 gInvPV;
 	float3 gCamPos;
-}
-cbuffer LightData : register (b1)
-{
 	float3 gLightPos;
 }
+
 
 Texture2D gAlbedoTexture : register(t0);
 Texture2D gNormalTexture : register(t1);
@@ -82,10 +70,18 @@ float3 GGXBRDF(float3 lightDir, float3 lightPos, float3 albedo, float3 normal, f
 float4 PSMain(vs_out pIn) : SV_TARGET
 {
 	float z = gDepth[pIn.position.xy];
-	float4 vProjectedPos = float4(pIn.position.xy, z, 1.0f);
+	//return float4(z/10.f, 0.0f, 0.0f, 1.0f);
+
+	float4 vProjectedPos = float4(pIn.position.xy, 1.0f, 1.0f);
+	//return vProjectedPos;
 	// Transform by the inverse screen view projection matrix to world space
+	return mul(vProjectedPos, gInvPV);
 	float4 vPositionWS = mul(vProjectedPos, gInvPV);
+	return vPositionWS;
+
 	// Divide by w to get the view-space position
+
+
 	vPositionWS = vPositionWS / vPositionWS.w;
 	float3 albedo = gAlbedoTexture[pIn.position.xy].xyz;
 	float3 normal = normalize(gNormalTexture[pIn.position.xy].xyz);
@@ -96,7 +92,10 @@ float4 PSMain(vs_out pIn) : SV_TARGET
 	float d = length(gLightPos.xyz - vPositionWS.xyz);
 	col = col * (1.0f / (1.0f + 0.1f * d + 0.01f * d));
 
-	return float4(col,1.0f);
+	return float4(col, 1.0f);
 
-
+	return gAlbedoTexture[pIn.position.xy];
+	return gNormalTexture[pIn.position.xy];
+	return gSpecularGlossTexture[pIn.position.xy];
+	return gDepth[pIn.position.xy];
 }

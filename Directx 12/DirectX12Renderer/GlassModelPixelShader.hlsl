@@ -35,20 +35,21 @@ float4 PSMain(PSInput input) : SV_TARGET
     float3 eye = normalize(input.eye);
     float3 normal = normalize(input.normal);
 
+    
+
     float ndl = saturate(dot(light, normal));
-    //¹âÏßµÄ·´Éä·½Ïò
+    //ï¿½ï¿½ï¿½ßµÄ·ï¿½ï¿½ä·½ï¿½ï¿½
     float3 r = normalize(reflect(-light, normal));
     float rdv = pow(saturate(dot(r, eye)), SpecularPow);
 
-    //»·¾³ÌùÍ¼ 
-    //ÕâÁ½ÐÐÖ÷Òª¹¦ÄÜ
+    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ 
+    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½
     float3 reflectEye = reflect(eye, normal);
     float3 refractEye = refract(eye, normal, 0.99);
     float4 reflectColor = g_EnvironmentTexture.Sample(gsamLinearClamp, reflectEye);
     float4 refractColor = g_EnvironmentTexture.Sample(gsamLinearClamp, refractEye);
 
-
-    ////¹âÕÕ·½³Ì
+    ////ï¿½ï¿½ï¿½Õ·ï¿½ï¿½ï¿½
     float4 color = AmbientColor * AmbientIntensity + DiffuseColor * DiffuseIntensity * ndl + SpecularColor * SpecularIntensity * rdv;
     return (reflectColor * 0.7 + refractColor * 0.3) * color;
 }

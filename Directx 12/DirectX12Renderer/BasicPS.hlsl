@@ -16,8 +16,6 @@ ps_output PSMain(vs_gbuffer_out pIn) : SV_TARGET
 	ps_output output;
 	output.albedo = float3(1.0f, 0.0f, 0.0f);
 	output.normal = float4(pIn.normal, 1.0f);
-
-
 	output.specgloss = float4(0.5,0.5,0.5,0.6);
 
 	return output;

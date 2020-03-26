@@ -1403,3 +1403,32 @@ void SetDepthStencilVisible(Kernel kernel, ResourceHeap resourceHeap, UINT count
 		kernel->m_commandList->ResourceBarrier(1, (1, &XD3D12_RESOURCE_BARRIER::Transition(resourceHeap->m_resource[i].Get(), D3D12_RESOURCE_STATE_DEPTH_READ, D3D12_RESOURCE_STATE_GENERIC_READ)));
 	}
 }
+
+ResourceHeap InitShaderResourceView(Kernel kernel, UINT count)
+{
+	ResourceHeap srvHeap = new SResourceHeap;
+	srvHeap->Init(kernel->m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, count, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+
+	return srvHeap;
+}
+
+void CreateShaderResourceView(ResourceHeap srvHeap, Kernel kernel, ResourceHeap resourceHeap, UINT count, std::vector<Format> formats, UINT base)
+{
+	D3D12_SHADER_RESOURCE_VIEW_DESC descSRV;
+	ZeroMemory(&descSRV, sizeof(descSRV));
+	descSRV.Texture2D.MipLevels = 1;
+	descSRV.Texture2D.MostDetailedMip = 0;
+	descSRV.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	descSRV.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+	for (UINT i = 0; i < count; ++i)
+	{
+		descSRV.Format = (DXGI_FORMAT)formats[i];
+		kernel->m_device->CreateShaderResourceView(resourceHeap->m_resource[i].Get(), &descSRV, srvHeap->GetCPUHandle(i + base));
+	}
+}
+
+void SetPrimitiveTopology(Kernel m_kernel, PrimitiveTopology primitiveTopology)
+{
+	m_kernel->m_commandList->IASetPrimitiveTopology((D3D_PRIMITIVE_TOPOLOGY)primitiveTopology);
+}

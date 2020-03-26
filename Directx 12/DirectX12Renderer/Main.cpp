@@ -1,6 +1,6 @@
 #include "DeferredShading.h"
 
-extern DeferredShading* app = new DeferredShading(1080, 720, L"Renderer");
+extern DeferredShading* app = new DeferredShading(800, 600, L"Renderer");
 
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {

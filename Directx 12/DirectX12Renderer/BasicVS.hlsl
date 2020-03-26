@@ -1,10 +1,11 @@
-
-cbuffer ViewData : register (b0)
+cbuffer cb0
 {
 	row_major float4x4 gMVP;
 	row_major float4x4 gInvPV;
 	float3 gCamPos;
+	float3 gLightPos;
 }
+
 
 struct vs_gbuffer_in {
 	float4 position : POSITION;
@@ -27,3 +28,4 @@ vs_gbuffer_out VSMain(vs_gbuffer_in vIn)
 	vOut.worldPos = vOut.position / vOut.position.w;
 	return vOut;
 }
+
