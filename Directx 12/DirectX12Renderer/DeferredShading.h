@@ -9,7 +9,8 @@ struct DeferredShadingConstantBuffer
 	XMFLOAT4X4 worldViewProjection;
 	XMFLOAT4X4 inverseTranspose;
 	XMFLOAT3 cameraPosition;
-	XMFLOAT3 lightPosition;
+	XMFLOAT3 lightPosition1;
+	XMFLOAT3 lightPosition2;
 };
 
 class DeferredShading : public BaseApp
@@ -45,5 +46,5 @@ private:
 	ResourceHeap m_srvRtvHeap;
 	ResourceHeap m_srvDsvHeap;
 	Format m_rtvFormats[3] = { FORMAT_R11G11B10_FLOAT , FORMAT_R8G8B8A8_SNORM , FORMAT_R8G8B8A8_UNORM };
-	float m_clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	float m_clearColor[4] = { 0.0f, 0.2f, 0.4f, 0.0f };
 };

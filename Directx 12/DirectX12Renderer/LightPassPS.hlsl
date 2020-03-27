@@ -8,7 +8,8 @@ cbuffer ViewData : register (b0)
 	row_major float4x4 gMVP;
 	row_major float4x4 gInvPV;
 	float3 gCamPos;
-	float3 gLightPos;
+	float3 gLightPos1;
+	float3 gLightPos2;
 }
 
 
@@ -70,27 +71,37 @@ float3 GGXBRDF(float3 lightDir, float3 lightPos, float3 albedo, float3 normal, f
 float4 PSMain(vs_out pIn) : SV_TARGET
 {
 	float z = gDepth[pIn.position.xy];
-	//return float4(z/10.f, 0.0f, 0.0f, 1.0f);
+	//if (z == 1.0)
+	//{
+	//	return float4(1.0f, 0.0f, 0.0f, 1.0f);
+	//}
+	//else
+	//{
+	//	return float4(0.0f, z / 2, 0.0f, 1.0f);
+	//}
 
-	float4 vProjectedPos = float4(pIn.position.xy, 1.0f, 1.0f);
+	float4 vProjectedPos = float4(pIn.position.xy, z, 1.0f);
 	//return vProjectedPos;
 	// Transform by the inverse screen view projection matrix to world space
-	return mul(vProjectedPos, gInvPV);
 	float4 vPositionWS = mul(vProjectedPos, gInvPV);
-	return vPositionWS;
+	// return vPositionWS;
 
 	// Divide by w to get the view-space position
 
 
 	vPositionWS = vPositionWS / vPositionWS.w;
+	//return vPositionWS;
 	float3 albedo = gAlbedoTexture[pIn.position.xy].xyz;
 	float3 normal = normalize(gNormalTexture[pIn.position.xy].xyz);
 	float4 specGloss = gSpecularGlossTexture[pIn.position.xy].xyzw;
 
-	float3 col = GGXBRDF(normalize(gLightPos.xyz - vPositionWS.xyz), gLightPos, albedo ,normal,
+	float3 col1 = GGXBRDF(normalize(gLightPos1.xyz - vPositionWS.xyz), gLightPos1, albedo ,normal,
 		normalize(gCamPos - vPositionWS), specGloss.xyz, specGloss.w);
-	float d = length(gLightPos.xyz - vPositionWS.xyz);
-	col = col * (1.0f / (1.0f + 0.1f * d + 0.01f * d));
+	float d1 = length(gLightPos1.xyz - vPositionWS.xyz);
+	float3 col2 = GGXBRDF(normalize(gLightPos2.xyz - vPositionWS.xyz), gLightPos2, albedo, normal,
+		normalize(gCamPos - vPositionWS), specGloss.xyz, specGloss.w);
+	float d2 = length(gLightPos2.xyz - vPositionWS.xyz);
+	float3 col = col1 * (1.0f / (1.0f + 0.1f * d1 + 0.01f * d1)) + col2 * (1.0f / (1.0f + 0.1f * d2 + 0.01f * d2));
 
 	return float4(col, 1.0f);
 

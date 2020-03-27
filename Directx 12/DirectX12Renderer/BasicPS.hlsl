@@ -20,3 +20,8 @@ ps_output PSMain(vs_gbuffer_out pIn) : SV_TARGET
 
 	return output;
 }
+//
+//float4 PSMain(vs_gbuffer_out pIn) : SV_TARGET
+//{
+//	return float4(0.5f, 0.0f, 0.0f, 1.0f);
+//}

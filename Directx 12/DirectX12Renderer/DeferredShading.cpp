@@ -6,9 +6,8 @@ DeferredShading::DeferredShading(UINT width, UINT height, std::wstring title) :
 
 void DeferredShading::OnInit()
 {
-	m_camera.Init({ 0.0f, 0.0f, 100.0f });
-	m_camera.SetMoveSpeed(2.0f);
-	m_constantData->lightPosition = XMFLOAT3(0, 7, -15);
+	m_camera.Init({ 0.0f, 0.0f, 60.0f });
+	m_camera.SetMoveSpeed(20.0f);
 
 	m_kernel = CreateKernel(m_width, m_height, false, m_hwnd);
 	m_rootSignature = CreateRootSignature(m_kernel, 1, 4, 0);
@@ -86,21 +85,25 @@ void DeferredShading::OnUpdate()
 	m_camera.Update(static_cast<float>(m_timer.GetElapsedSeconds()));
 	XMMATRIX view = m_camera.GetViewMatrix();
 	XMMATRIX projection = m_camera.GetProjectionMatrix(1.4f, static_cast<float>(m_width) / static_cast<float>(m_height), 0.01f, 10000.0f);
-	XMFLOAT4X4 matScreen = XMFLOAT4X4(2.0f / m_width, 0, 0, 0, 0, -2.0f / m_height, 0, 0, 0, 0, 1.f, 0, -1.f, 1.f, 0, 1.f);
-
-	XMMATRIX inverseTranspose = XMMatrixTranspose(
-		GMathFM(matScreen) *
-		XMMatrixInverse(&XMMatrixDeterminant(projection), projection) *
-		XMMatrixInverse(&XMMatrixDeterminant(view), view)
+	XMFLOAT4X4 matScreen = XMFLOAT4X4(
+		2.0f / m_width, 0.0f, 0.0f, -1.0f,
+		0.0f, 2.0f / m_height, 0, -1.0f, 
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
 	);
+
+	XMMATRIX inverseTranspose =
+		XMMatrixInverse(&XMMatrixDeterminant(projection), projection) *
+		XMMatrixInverse(&XMMatrixDeterminant(view), view) *
+		GMathFM(matScreen);
 
 	XMStoreFloat4x4(&m_constantData[0].worldViewProjection, XMMatrixMultiply(view, projection));
 	m_constantData[0].cameraPosition = m_camera.GetEyePosition();
 	XMStoreFloat4x4(&m_constantData[0].inverseTranspose, inverseTranspose);
-	m_constantData[0].lightPosition = XMFLOAT3(0, 7, -15);
+	m_constantData[0].lightPosition1 = XMFLOAT3(0, 20, 20);
+	m_constantData[0].lightPosition2 = XMFLOAT3(0, 30, -20);
+	XMMATRIX result = XMMatrixMultiply(view, projection) * inverseTranspose;
 
-
-	XMMATRIX result = GMathFM(m_constantData[0].worldViewProjection) * GMathFM(m_constantData[0].inverseTranspose);
 	UpdateConstantBuffers(m_constantBuffer, m_constantData, sizeof(DeferredShadingConstantBuffer), 1);
 }
 
