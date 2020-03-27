@@ -149,7 +149,6 @@
     <ClInclude Include="GlassModel.h" />
     <ClInclude Include="MassModel.h" />
     <ClInclude Include="NBodyGravity.h" />
-    <ClInclude Include="Geometry.cpp" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RendererHelper.h" />
     <ClInclude Include="RendererStruct.h" />

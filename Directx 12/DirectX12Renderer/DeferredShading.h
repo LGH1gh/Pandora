@@ -27,13 +27,15 @@ public:
 	virtual void OnKeyDown(UINT8 wParam);
 
 private:
+	void PopulateCommandList(Viewport vp, Pipeline pipeline);
+
 	SimpleCamera m_camera;
 	StepTimer m_timer;
 
 	Kernel m_kernel;
 	RootSignature m_rootSignature;
 	Pipeline m_pipeline;
-	Pipeline m_lightPipeline;
+	Pipeline m_lightPipeline[4];
 	VertexSetup m_quadVertexSetup;
 	VertexSetup m_teapotVertexSetup;
 

@@ -139,3 +139,4 @@ void SetDepthStencilVisible(Kernel, ResourceHeap, UINT);
 ResourceHeap InitShaderResourceView(Kernel, UINT);
 void CreateShaderResourceView(ResourceHeap srvHeap, Kernel kernel, ResourceHeap resourceHeap, UINT count, std::vector<Format> formats, UINT base);
 void SetPrimitiveTopology(Kernel m_kernel, PrimitiveTopology primitiveTopology);
+void SetViewport(Kernel kernel, Viewport viewport);

@@ -40,8 +40,14 @@ void DeferredShading::OnInit()
 	lightPsoDesc.PS = ShaderDesc(L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\LightPassPS.hlsl", "PSMain", compileFlags);
 	lightPsoDesc.DepthStencilState.DepthEnable = false;
 	lightPsoDesc.RasterizerState.DepthClipEnable = false;
-	m_lightPipeline = CreateGraphicsPipeline(m_kernel, lightPsoDesc);
+	m_lightPipeline[3] = CreateGraphicsPipeline(m_kernel, lightPsoDesc);
 
+	lightPsoDesc.PS = ShaderDesc(L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\LightPassPS.hlsl", "PSNormalMain", compileFlags);
+	m_lightPipeline[0] = CreateGraphicsPipeline(m_kernel, lightPsoDesc);
+	lightPsoDesc.PS = ShaderDesc(L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\LightPassPS.hlsl", "PSLight1Main", compileFlags);
+	m_lightPipeline[1] = CreateGraphicsPipeline(m_kernel, lightPsoDesc);
+	lightPsoDesc.PS = ShaderDesc(L"D:\\Pandora\\Directx 12\\DirectX12Renderer\\LightPassPS.hlsl", "PSLight2Main", compileFlags);
+	m_lightPipeline[2] = CreateGraphicsPipeline(m_kernel, lightPsoDesc);
 	
 	m_quadVertexSetup = CreateVertexSetup(
 		m_kernel,
@@ -113,33 +119,50 @@ void DeferredShading::OnRender()
 	BeginPopulateGraphicsCommand(m_kernel, nullptr, m_clearColor, true);
 	{
 		SetGraphicsRootSignature(m_kernel, m_rootSignature);
-		SetPipeline(m_kernel, m_pipeline);
 
 		SetDescriptorHeaps(m_kernel, std::vector<ResourceHeap>({ m_constantBuffer }));
 		SetConstantBuffer(m_kernel, m_constantBuffer, 0);
+		
 
-		for (UINT i = 0; i < 3; ++i)
-			ClearRenderTargetView(m_kernel, m_rtvHeap, i, m_clearColor);
-		ClearDepthStencilView(m_kernel, m_dsvHeap);
-		SetRenderTargets(m_kernel, m_rtvHeap, m_dsvHeap, 3);
-		SetDescriptorHeaps(m_kernel, std::vector<ResourceHeap>({ m_srvHeap }));
-		SetTexture(m_kernel, m_srvHeap);
+		for (UINT i = 0; i < 4; i++) {
+			Viewport vp = {
+				(i / 2) * ((float)m_width / 2),
+				(i % 2) * ((float)m_height / 2),
+				(float)m_width / 2, 
+				(float)m_height / 2
+			};
+			PopulateCommandList(vp, m_lightPipeline[i]);
+		}		
 
-		SetVertexSetup(m_kernel, m_teapotVertexSetup);
-		DrawIndexed(m_kernel, 0, sizeof(teapotIndex) / sizeof(DWORD));
-
-		SetRenderTargets(m_kernel, nullptr, nullptr, 1);
-		SetRenderTargetsVisible(m_kernel, m_rtvHeap, 3);
-		SetDepthStencilVisible(m_kernel, m_dsvHeap, 1);
-		SetPipeline(m_kernel, m_lightPipeline);
-		SetPrimitiveTopology(m_kernel, PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		SetVertexSetup(m_kernel, m_quadVertexSetup);
-		Draw(m_kernel, 0, 4);
 	}
 	EndPopulateGraphicsCommand(m_kernel);
 	ExecuteCommand(m_kernel);
 
 	EndOnRender(m_kernel);
+}
+
+void DeferredShading::PopulateCommandList(Viewport vp, Pipeline pipeline)
+{
+	SetViewport(m_kernel, vp);
+	SetPipeline(m_kernel, m_pipeline);
+
+	for (UINT i = 0; i < 3; ++i)
+		ClearRenderTargetView(m_kernel, m_rtvHeap, i, m_clearColor);
+	ClearDepthStencilView(m_kernel, m_dsvHeap);
+	SetRenderTargets(m_kernel, m_rtvHeap, m_dsvHeap, 3);
+	SetDescriptorHeaps(m_kernel, std::vector<ResourceHeap>({ m_srvHeap }));
+	SetTexture(m_kernel, m_srvHeap);
+	SetRenderTargetsVisible(m_kernel, m_rtvHeap, 3);
+	SetDepthStencilVisible(m_kernel, m_dsvHeap, 1);
+
+	SetVertexSetup(m_kernel, m_teapotVertexSetup);
+	DrawIndexed(m_kernel, 0, sizeof(teapotIndex) / sizeof(DWORD));
+
+	SetRenderTargets(m_kernel, nullptr, nullptr, 1);
+	SetPipeline(m_kernel, pipeline);
+	SetPrimitiveTopology(m_kernel, PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	SetVertexSetup(m_kernel, m_quadVertexSetup);
+	Draw(m_kernel, 0, 4);
 }
 
 void DeferredShading::OnDestroy()

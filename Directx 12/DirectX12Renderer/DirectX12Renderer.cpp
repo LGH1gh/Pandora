@@ -1050,16 +1050,15 @@ void Reset(ComputeKernel computeKernel, Pipeline pipeline)
 
 void BeginPopulateGraphicsCommand(Kernel kernel, ResourceHeap dsvHeap, const float* clearColor, bool deferredShading)
 {
-
-	D3D12_VIEWPORT vp = { 0.0f, 0.0f, static_cast<float>(kernel->m_width), static_cast<float>(kernel->m_height), 0.0f, 1.0f };
-	D3D12_RECT sr = { 0, 0, static_cast<LONG>(kernel->m_width), static_cast<LONG>(kernel->m_height) };
-	kernel->m_commandList->RSSetViewports(1, &vp);
-	kernel->m_commandList->RSSetScissorRects(1, &sr);
 	kernel->m_commandList->ResourceBarrier(1, &XD3D12_RESOURCE_BARRIER::Transition(kernel->m_renderTargets[kernel->m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle(kernel->m_rtvHeap->GetCPUHandle(kernel->m_frameIndex));
 	if (!deferredShading)
 	{
+		D3D12_VIEWPORT vp = { 0.0f, 0.0f, static_cast<float>(kernel->m_width), static_cast<float>(kernel->m_height), 0.0f, 1.0f };
+		D3D12_RECT sr = { 0, 0, static_cast<LONG>(kernel->m_width), static_cast<LONG>(kernel->m_height) };
+		kernel->m_commandList->RSSetViewports(1, &vp);
+		kernel->m_commandList->RSSetScissorRects(1, &sr);
 		if (dsvHeap == nullptr)
 		{
 			kernel->m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
@@ -1075,6 +1074,8 @@ void BeginPopulateGraphicsCommand(Kernel kernel, ResourceHeap dsvHeap, const flo
 	}
 	else
 	{
+		D3D12_RECT sr = { 0, 0, static_cast<LONG>(kernel->m_width), static_cast<LONG>(kernel->m_height) };
+		kernel->m_commandList->RSSetScissorRects(1, &sr);
 		kernel->m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 	}
 }
@@ -1431,4 +1432,10 @@ void CreateShaderResourceView(ResourceHeap srvHeap, Kernel kernel, ResourceHeap 
 void SetPrimitiveTopology(Kernel m_kernel, PrimitiveTopology primitiveTopology)
 {
 	m_kernel->m_commandList->IASetPrimitiveTopology((D3D_PRIMITIVE_TOPOLOGY)primitiveTopology);
+}
+
+void SetViewport(Kernel kernel, Viewport viewport)
+{
+	D3D12_VIEWPORT vp = { viewport.TopLeftX, viewport.TopLeftY, viewport.Width, viewport.Height, 0.0f, 1.0f };
+	kernel->m_commandList->RSSetViewports(1, &vp);
 }

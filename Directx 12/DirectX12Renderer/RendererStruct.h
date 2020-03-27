@@ -649,6 +649,16 @@ struct ResourceDesc
     ResourceFlags Flags;
 } 	ResourceDesc;
 
+typedef struct Viewport
+{
+    FLOAT TopLeftX;
+    FLOAT TopLeftY;
+    FLOAT Width;
+    FLOAT Height;
+    FLOAT MinDepth = 0.0f;
+    FLOAT MaxDepth = 1.0f;
+} 	Viewport;
+
 typedef struct StaticSampleDesc
 {
     Filter Filter;

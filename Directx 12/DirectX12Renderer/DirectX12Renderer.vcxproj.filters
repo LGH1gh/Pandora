@@ -84,9 +84,6 @@
     <ClInclude Include="GlassModel.h">
       <Filter>GlassModel</Filter>
     </ClInclude>
-    <ClInclude Include="Geometry.cpp">
-      <Filter>资源文件</Filter>
-    </ClInclude>
     <ClInclude Include="DeferredShading.h">
       <Filter>DeferredShading</Filter>
     </ClInclude>

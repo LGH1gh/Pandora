@@ -71,26 +71,14 @@ float3 GGXBRDF(float3 lightDir, float3 lightPos, float3 albedo, float3 normal, f
 float4 PSMain(vs_out pIn) : SV_TARGET
 {
 	float z = gDepth[pIn.position.xy];
-	//if (z == 1.0)
-	//{
-	//	return float4(1.0f, 0.0f, 0.0f, 1.0f);
-	//}
-	//else
-	//{
-	//	return float4(0.0f, z / 2, 0.0f, 1.0f);
-	//}
+
 
 	float4 vProjectedPos = float4(pIn.position.xy, z, 1.0f);
-	//return vProjectedPos;
 	// Transform by the inverse screen view projection matrix to world space
 	float4 vPositionWS = mul(vProjectedPos, gInvPV);
-	// return vPositionWS;
-
 	// Divide by w to get the view-space position
-
-
 	vPositionWS = vPositionWS / vPositionWS.w;
-	//return vPositionWS;
+
 	float3 albedo = gAlbedoTexture[pIn.position.xy].xyz;
 	float3 normal = normalize(gNormalTexture[pIn.position.xy].xyz);
 	float4 specGloss = gSpecularGlossTexture[pIn.position.xy].xyzw;
@@ -103,10 +91,58 @@ float4 PSMain(vs_out pIn) : SV_TARGET
 	float d2 = length(gLightPos2.xyz - vPositionWS.xyz);
 	float3 col = col1 * (1.0f / (1.0f + 0.1f * d1 + 0.01f * d1)) + col2 * (1.0f / (1.0f + 0.1f * d2 + 0.01f * d2));
 
-	return float4(col, 1.0f);
+	return float4(col * 5, 1.0f);
+}
 
-	return gAlbedoTexture[pIn.position.xy];
+float4 PSNormalMain(vs_out pIn) : SV_TARGET
+{
 	return gNormalTexture[pIn.position.xy];
-	return gSpecularGlossTexture[pIn.position.xy];
-	return gDepth[pIn.position.xy];
+}
+
+float4 PSLight1Main(vs_out pIn) : SV_TARGET
+{
+	float z = gDepth[pIn.position.xy];
+
+
+	float4 vProjectedPos = float4(pIn.position.xy, z, 1.0f);
+	// Transform by the inverse screen view projection matrix to world space
+	float4 vPositionWS = mul(vProjectedPos, gInvPV);
+	// Divide by w to get the view-space position
+	vPositionWS = vPositionWS / vPositionWS.w;
+
+	float3 albedo = gAlbedoTexture[pIn.position.xy].xyz;
+	float3 normal = normalize(gNormalTexture[pIn.position.xy].xyz);
+	float4 specGloss = gSpecularGlossTexture[pIn.position.xy].xyzw;
+
+	float3 col = GGXBRDF(normalize(gLightPos1.xyz - vPositionWS.xyz), gLightPos1, albedo ,normal,
+		normalize(gCamPos - vPositionWS), specGloss.xyz, specGloss.w);
+	float d = length(gLightPos1.xyz - vPositionWS.xyz);
+
+	col = col * (1.0f / (1.0f + 0.1f * d + 0.01f * d));
+
+	return float4(col * 5, 1.0f);
+}
+
+float4 PSLight2Main(vs_out pIn) : SV_TARGET
+{
+	float z = gDepth[pIn.position.xy];
+
+
+	float4 vProjectedPos = float4(pIn.position.xy, z, 1.0f);
+	// Transform by the inverse screen view projection matrix to world space
+	float4 vPositionWS = mul(vProjectedPos, gInvPV);
+	// Divide by w to get the view-space position
+	vPositionWS = vPositionWS / vPositionWS.w;
+
+	float3 albedo = gAlbedoTexture[pIn.position.xy].xyz;
+	float3 normal = normalize(gNormalTexture[pIn.position.xy].xyz);
+	float4 specGloss = gSpecularGlossTexture[pIn.position.xy].xyzw;
+
+	float3 col = GGXBRDF(normalize(gLightPos2.xyz - vPositionWS.xyz), gLightPos2, albedo ,normal,
+		normalize(gCamPos - vPositionWS), specGloss.xyz, specGloss.w);
+	float d = length(gLightPos2.xyz - vPositionWS.xyz);
+
+	col = col * (1.0f / (1.0f + 0.1f * d + 0.01f * d));
+
+	return float4(col * 5, 1.0f);
 }
