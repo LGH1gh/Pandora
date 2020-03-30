@@ -91,7 +91,7 @@ float4 PSMain(vs_out pIn) : SV_TARGET
 	float d2 = length(gLightPos2.xyz - vPositionWS.xyz);
 	float3 col = col1 * (1.0f / (1.0f + 0.1f * d1 + 0.01f * d1)) + col2 * (1.0f / (1.0f + 0.1f * d2 + 0.01f * d2));
 
-	return float4(col * 5, 1.0f);
+	return float4(col, 1.0f);
 }
 
 float4 PSNormalMain(vs_out pIn) : SV_TARGET
@@ -120,7 +120,7 @@ float4 PSLight1Main(vs_out pIn) : SV_TARGET
 
 	col = col * (1.0f / (1.0f + 0.1f * d + 0.01f * d));
 
-	return float4(col * 5, 1.0f);
+	return float4(col, 1.0f);
 }
 
 float4 PSLight2Main(vs_out pIn) : SV_TARGET
@@ -144,5 +144,5 @@ float4 PSLight2Main(vs_out pIn) : SV_TARGET
 
 	col = col * (1.0f / (1.0f + 0.1f * d + 0.01f * d));
 
-	return float4(col * 5, 1.0f);
+	return float4(col, 1.0f);
 }
